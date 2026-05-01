@@ -106,6 +106,12 @@ SCHEMA_STATEMENTS = [
     )""",
     "CREATE INDEX IF NOT EXISTS idx_claimed_entity   ON megaeth_claimed(entity_uuid)",
     "CREATE INDEX IF NOT EXISTS idx_claimed_receiver ON megaeth_claimed(receiver)",
+
+    """CREATE TABLE IF NOT EXISTS cache (
+        key        TEXT PRIMARY KEY,
+        value      TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+    )""",
 ]
 
 
@@ -272,3 +278,25 @@ def upsert_meta(address, label=None, is_contract=None, note=None):
 def transfer_count():
     with cursor() as c:
         return c.execute("SELECT COUNT(*) FROM transfers").fetchone()[0]
+
+
+def cache_get(key):
+    """Return (value_str, updated_at) or (None, 0) if not cached."""
+    with cursor() as c:
+        row = c.execute("SELECT value, updated_at FROM cache WHERE key = ?", (key,)).fetchone()
+        if not row:
+            return None, 0
+        return row["value"] if hasattr(row, "keys") else row[0], \
+               (row["updated_at"] if hasattr(row, "keys") else row[1])
+
+
+def cache_set(key, value, updated_at=None):
+    import time
+    if updated_at is None:
+        updated_at = int(time.time())
+    with cursor() as c:
+        c.execute(
+            "INSERT INTO cache(key, value, updated_at) VALUES(?, ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at",
+            (key, value, updated_at),
+        )

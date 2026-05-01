@@ -6,7 +6,17 @@ import json
 from flask import Flask, jsonify, render_template, request
 
 from aggregate import per_address, summary
-from db import connect, get_state, transfer_count
+from db import connect, get_state, transfer_count, cache_get
+
+
+def _serve_cached(key, fallback_fn):
+    """Try cache first; if missing, fall back to live compute."""
+    raw, _updated = cache_get(key)
+    if raw:
+        from flask import Response
+        return Response(raw, mimetype="application/json")
+    # No cache yet — compute live (much heavier; first request after deploy)
+    return jsonify(fallback_fn())
 
 
 def _all_claim_proxies():
@@ -29,6 +39,60 @@ def get_rows(force=False):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+# ─── Cached endpoint handlers (read precomputed snapshot from DB) ───
+# Each replaces the live-compute endpoint. The original heavy logic is
+# kept below as the fallback for the very first request after deploy
+# (before the cron has had a chance to populate the cache).
+
+@app.route("/api/v2/behavior")
+def api_v2_behavior():
+    raw, updated = cache_get("snapshot:behavior")
+    if raw:
+        from flask import Response
+        resp = Response(raw, mimetype="application/json")
+        resp.headers["X-Cache-Updated"] = str(updated)
+        return resp
+    return jsonify({"error": "snapshot not built yet — run cron"}), 503
+
+@app.route("/api/v2/summary")
+def api_v2_summary():
+    raw, updated = cache_get("snapshot:summary")
+    if raw:
+        from flask import Response
+        resp = Response(raw, mimetype="application/json")
+        resp.headers["X-Cache-Updated"] = str(updated)
+        return resp
+    return jsonify({"error": "snapshot not built yet"}), 503
+
+@app.route("/api/v2/eligibility")
+def api_v2_eligibility():
+    raw, updated = cache_get("snapshot:eligibility")
+    if raw:
+        from flask import Response
+        resp = Response(raw, mimetype="application/json")
+        resp.headers["X-Cache-Updated"] = str(updated)
+        return resp
+    return jsonify({"error": "snapshot not built yet"}), 503
+
+@app.route("/api/v2/timeline")
+def api_v2_timeline():
+    raw, updated = cache_get("snapshot:timeline")
+    if raw:
+        from flask import Response
+        resp = Response(raw, mimetype="application/json")
+        resp.headers["X-Cache-Updated"] = str(updated)
+        return resp
+    return jsonify({"error": "snapshot not built yet"}), 503
+
+@app.route("/api/v2/meta")
+def api_v2_meta():
+    raw, _ = cache_get("snapshot:meta")
+    if raw:
+        from flask import Response
+        return Response(raw, mimetype="application/json")
+    return jsonify({"error": "snapshot not built yet"}), 503
 
 
 @app.route("/api/debug")
@@ -65,6 +129,14 @@ def api_debug():
 
 @app.route("/api/summary")
 def api_summary():
+    # Fast path: serve from cache if snapshot exists
+    raw, updated = cache_get("snapshot:summary")
+    if raw:
+        from flask import Response
+        resp = Response(raw, mimetype="application/json")
+        resp.headers["X-Cache-Updated"] = str(updated)
+        return resp
+    # Slow fallback (live compute) — should never run in steady state
     rows = get_rows()
     s = summary(rows)
     s["sync"] = {
@@ -184,6 +256,13 @@ def api_timeline():
     Returns three series: claims (from any distributor), sells (to any
     DEX), buys (from any DEX). Used to render a time-axis chart.
     """
+    # Fast path: serve from cache
+    raw, updated = cache_get("snapshot:timeline")
+    if raw:
+        from flask import Response
+        resp = Response(raw, mimetype="application/json")
+        resp.headers["X-Cache-Updated"] = str(updated)
+        return resp
     from db import connect, get_state
     conn = connect()
     batchers = [b.lower() for b in json.loads(get_state("batch_senders") or "[]")]
@@ -302,6 +381,26 @@ def api_refresh():
     return jsonify({"ok": True, "addresses": len(_CACHE["rows"])})
 
 
+@app.route("/api/cron/snapshot", methods=["GET", "POST"])
+def api_cron_snapshot():
+    """Trigger ONLY the snapshot rebuild (no sync, no classify).
+    Lightweight — just recomputes aggregates from existing data and writes
+    cached blobs. Useful to seed the cache after deploy or after a manual
+    classify.
+    """
+    import os, snapshot
+    secret = os.environ.get("CRON_SECRET")
+    if secret:
+        auth = request.headers.get("Authorization", "")
+        if auth != f"Bearer {secret}":
+            return jsonify({"error": "unauthorized"}), 401
+    try:
+        return jsonify(snapshot.run())
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "trace": traceback.format_exc()[:1000]}), 500
+
+
 @app.route("/api/cron/sync", methods=["GET", "POST"])
 def api_cron_sync():
     """Hourly cron entry-point.
@@ -347,8 +446,15 @@ def api_cron_sync():
         get_rows(force=True)
         return {"addresses": len(_CACHE["rows"])}
 
+    def build_snapshot():
+        # The big win: precompute and store JSON blobs so API requests
+        # serve from cache instead of re-querying the full transfers table.
+        import snapshot
+        return snapshot.run()
+
     step("sync",     run_sync)
     step("classify", run_classify)
+    step("snapshot", build_snapshot)
     step("refresh",  refresh_cache)
 
     summary["total_elapsed"] = round(time.time() - t0, 2)
@@ -358,6 +464,13 @@ def api_cron_sync():
 
 @app.route("/api/behavior")
 def api_behavior():
+    # Fast path: serve from cache
+    raw, updated = cache_get("snapshot:behavior")
+    if raw:
+        from flask import Response
+        resp = Response(raw, mimetype="application/json")
+        resp.headers["X-Cache-Updated"] = str(updated)
+        return resp
     """Unified view: every address known to be eligible for MEGA, bucketed
     by what they did with it (sold / held / bought_more / not_claimed).
 
@@ -661,6 +774,13 @@ def api_behavior():
 @app.route("/api/eligibility")
 def api_eligibility():
     """Cross-reference Ethereum-mainnet eligibility lists with MegaETH claims."""
+    # Fast path: serve from cache
+    raw, updated = cache_get("snapshot:eligibility")
+    if raw:
+        from flask import Response
+        resp = Response(raw, mimetype="application/json")
+        resp.headers["X-Cache-Updated"] = str(updated)
+        return resp
     from db import connect, get_state
     conn = connect()
 
