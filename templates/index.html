@@ -195,14 +195,22 @@
 
 <!-- ACTIVITY OVER TIME -->
 <section>
-  <div class="h-row">
+  <div class="h-row" style="display:flex; justify-content:space-between; align-items:center; gap:14px;">
     <h2><span class="bracket">[◻]</span>ACTIVITY OVER TIME</h2>
+    <div class="ctl">
+      <label>Show</label>
+      <select id="tlMode">
+        <option value="count" selected>Transaction count</option>
+        <option value="volume">MEGA volume</option>
+      </select>
+    </div>
   </div>
   <div class="card timecard">
     <svg id="timeline" viewBox="0 0 1200 240" preserveAspectRatio="none"></svg>
     <div class="tooltip" id="tooltip"></div>
     <div class="stk-legend" style="margin-top:8px">
       <div><span style="display:inline-block;width:10px;height:10px;background:var(--white);margin-right:6px"></span>Claims received</div>
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--theme);margin-right:6px"></span>Staked</div>
       <div><span style="display:inline-block;width:10px;height:10px;background:var(--sold);margin-right:6px"></span>Sells to DEX</div>
       <div><span style="display:inline-block;width:10px;height:10px;background:var(--bought);margin-right:6px"></span>Buys from DEX</div>
     </div>
@@ -291,21 +299,39 @@ function donut(segments, centerVal, centerLabel, size=200) {
     </svg>`;
 }
 
-// Timeline with hover tooltip
+// Timeline with hover tooltip — 4 series, count or volume mode
 let _tlSeries = [];
+let _tlMode = 'count';   // 'count' | 'volume'
+
 function renderTimeline(series) {
   if (!series.length) return;
+  _tlSeries = series;
+  redrawTimeline();
+}
+
+function redrawTimeline() {
+  const series = _tlSeries;
+  if (!series || !series.length) return;
   const svg = document.getElementById('timeline');
-  const W = 1200, H = 240, padL = 50, padR = 14, padT = 14, padB = 32;
+  const W = 1200, H = 240, padL = 56, padR = 14, padT = 14, padB = 32;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
-  const active = series.filter(s => s.n_claim + s.n_sell + s.n_buy > 0);
+  // Map mode → field names
+  const fields = _tlMode === 'volume'
+    ? { claim:'claims_mega', sell:'sells_mega', buy:'buys_mega', stake:'stakes_mega' }
+    : { claim:'n_claim',     sell:'n_sell',     buy:'n_buy',     stake:'n_stake'    };
+
+  const active = series.filter(s =>
+    (s[fields.claim]||0) + (s[fields.sell]||0) + (s[fields.buy]||0) + (s[fields.stake]||0) > 0
+  );
   if (!active.length) return;
-  _tlSeries = active;
-  const maxN = Math.max(...active.map(s => Math.max(s.n_claim, s.n_sell, s.n_buy)));
+
+  const maxN = Math.max(...active.map(s =>
+    Math.max(s[fields.claim]||0, s[fields.sell]||0, s[fields.buy]||0, s[fields.stake]||0)
+  )) || 1;
   const x = i => padL + (i / Math.max(1, active.length-1)) * innerW;
-  const y = v => padT + innerH - (v / maxN) * innerH;
+  const y = v => padT + innerH - ((v||0) / maxN) * innerH;
 
   const linePath = (key, color) => {
     let d = '';
@@ -316,13 +342,15 @@ function renderTimeline(series) {
     let d = `M ${x(0)} ${y(0)}`;
     active.forEach((s, i) => { d += ` L ${x(i)} ${y(s[key])}`; });
     d += ` L ${x(active.length-1)} ${y(0)} Z`;
-    return `<path d="${d}" fill="${color}" opacity="0.10"/>`;
+    return `<path d="${d}" fill="${color}" opacity="0.08"/>`;
   };
 
+  // Y-axis labels: integer count or formatted MEGA
+  const yLabel = v => _tlMode === 'volume' ? fmt(v) : fmtInt(Math.round(v));
   const gridY = [0.25, 0.5, 0.75, 1].map(t => {
     const yp = padT + innerH * (1 - t);
     return `<line class="grid" x1="${padL}" y1="${yp}" x2="${W-padR}" y2="${yp}"/>` +
-           `<text class="axis" x="${padL-8}" y="${yp+3}" text-anchor="end">${fmtInt(Math.round(maxN*t))}</text>`;
+           `<text class="axis" x="${padL-8}" y="${yp+3}" text-anchor="end">${yLabel(maxN*t)}</text>`;
   }).join('');
   const ticks = [0, 0.33, 0.66, 1].map(t => {
     const i = Math.round((active.length-1) * t);
@@ -340,14 +368,17 @@ function renderTimeline(series) {
   svg.innerHTML = `
     ${gridY}
     ${ticks}
-    ${areaPath('n_claim','var(--white)')}
-    ${areaPath('n_sell', 'var(--sold)')}
-    ${areaPath('n_buy',  'var(--bought)')}
-    ${linePath('n_buy',  'var(--bought)')}
-    ${linePath('n_sell', 'var(--sold)')}
-    ${linePath('n_claim','var(--white)')}
-    <line id="hoverLine" class="hover-line" style="display:none" x1="0" y1="${padT}" x2="0" y2="${padT+innerH}"/>
+    ${areaPath(fields.claim,'var(--white)')}
+    ${areaPath(fields.stake,'var(--theme)')}
+    ${areaPath(fields.sell, 'var(--sold)')}
+    ${areaPath(fields.buy,  'var(--bought)')}
+    ${linePath(fields.buy,  'var(--bought)')}
+    ${linePath(fields.sell, 'var(--sold)')}
+    ${linePath(fields.stake,'var(--theme)')}
+    ${linePath(fields.claim,'var(--white)')}
+    <line  id="hoverLine" class="hover-line" style="display:none" x1="0" y1="${padT}" x2="0" y2="${padT+innerH}"/>
     <circle id="ptClaim" class="point" r="4" stroke="var(--white)"  style="display:none"/>
+    <circle id="ptStake" class="point" r="4" stroke="var(--theme)"  style="display:none"/>
     <circle id="ptSell"  class="point" r="4" stroke="var(--sold)"   style="display:none"/>
     <circle id="ptBuy"   class="point" r="4" stroke="var(--bought)" style="display:none"/>
     ${hovers}
@@ -356,36 +387,41 @@ function renderTimeline(series) {
   const tooltip = document.getElementById('tooltip');
   const hoverLine = svg.querySelector('#hoverLine');
   const ptClaim = svg.querySelector('#ptClaim');
+  const ptStake = svg.querySelector('#ptStake');
   const ptSell  = svg.querySelector('#ptSell');
   const ptBuy   = svg.querySelector('#ptBuy');
 
+  const fmtVal = v => _tlMode === 'volume' ? `${fmt(v)} MEGA` : fmtInt(v);
+
   svg.querySelectorAll('.hover-rect').forEach(rect => {
-    rect.addEventListener('mouseenter', (e) => {
+    rect.addEventListener('mouseenter', () => {
       const i = parseInt(rect.dataset.i, 10);
       const s = active[i];
       const px = x(i);
-      // Move dashed line + points
-      hoverLine.setAttribute('x1', px); hoverLine.setAttribute('x2', px);
-      hoverLine.style.display = '';
-      ptClaim.setAttribute('cx', px); ptClaim.setAttribute('cy', y(s.n_claim)); ptClaim.style.display = '';
-      ptSell.setAttribute('cx', px);  ptSell.setAttribute('cy', y(s.n_sell));  ptSell.style.display = '';
-      ptBuy.setAttribute('cx', px);   ptBuy.setAttribute('cy', y(s.n_buy));    ptBuy.style.display = '';
-      // Position tooltip via SVG coordinate → DOM coordinate
+      hoverLine.setAttribute('x1', px); hoverLine.setAttribute('x2', px); hoverLine.style.display = '';
+      ptClaim.setAttribute('cx', px); ptClaim.setAttribute('cy', y(s[fields.claim])); ptClaim.style.display = '';
+      ptStake.setAttribute('cx', px); ptStake.setAttribute('cy', y(s[fields.stake])); ptStake.style.display = '';
+      ptSell.setAttribute('cx', px);  ptSell.setAttribute('cy', y(s[fields.sell]));   ptSell.style.display = '';
+      ptBuy.setAttribute('cx', px);   ptBuy.setAttribute('cy', y(s[fields.buy]));     ptBuy.style.display = '';
       const card = svg.parentElement;
       const cardRect = card.getBoundingClientRect();
       const xRatio = px / W;
       const ttX = xRatio * cardRect.width;
       const ttY = (padT + 8) / H * cardRect.height;
-      const ttWidth = 220;
+      const ttWidth = 240;
       const left = Math.min(cardRect.width - ttWidth - 16, Math.max(8, ttX - ttWidth/2));
       tooltip.style.left = left + 'px';
       tooltip.style.top  = ttY + 'px';
       tooltip.innerHTML = `
-        <div class="when">${s.hour.replace('T',' ')}:00 UTC</div>
-        <div class="row"><span class="l"><span class="sw" style="background:var(--white)"></span>Claims</span><span class="v">${fmtInt(s.n_claim)}</span></div>
-        <div class="row"><span class="l"><span class="sw" style="background:var(--sold)"></span>Sells</span><span class="v">${fmtInt(s.n_sell)}</span></div>
-        <div class="row"><span class="l"><span class="sw" style="background:var(--bought)"></span>Buys</span><span class="v">${fmtInt(s.n_buy)}</span></div>
-        <div class="row" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--line)"><span class="l">MEGA flow</span><span class="v">${fmt(s.claims_mega + s.sells_mega + s.buys_mega)}</span></div>
+        <div class="when">${s.hour.replace('T',' ')}:00 UTC · ${_tlMode === 'volume' ? 'volume' : 'count'}</div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--white)"></span>Claims</span><span class="v">${fmtVal(s[fields.claim])}</span></div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--theme)"></span>Staked</span><span class="v">${fmtVal(s[fields.stake])}</span></div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--sold)"></span>Sells</span><span class="v">${fmtVal(s[fields.sell])}</span></div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--bought)"></span>Buys</span><span class="v">${fmtVal(s[fields.buy])}</span></div>
+        <div class="row" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--line)">
+          <span class="l">${_tlMode === 'volume' ? 'Total flow' : 'Total events'}</span>
+          <span class="v">${fmtVal((s[fields.claim]||0) + (s[fields.stake]||0) + (s[fields.sell]||0) + (s[fields.buy]||0))}</span>
+        </div>
       `;
       tooltip.style.opacity = '1';
     });
@@ -393,7 +429,8 @@ function renderTimeline(series) {
   svg.addEventListener('mouseleave', () => {
     tooltip.style.opacity = '0';
     hoverLine.style.display = 'none';
-    ptClaim.style.display = 'none'; ptSell.style.display = 'none'; ptBuy.style.display = 'none';
+    ptClaim.style.display = 'none'; ptStake.style.display = 'none';
+    ptSell.style.display = 'none'; ptBuy.style.display = 'none';
   });
 }
 
@@ -733,6 +770,11 @@ const DEFAULT_SORT_FOR_BUCKET = {
   bought_more: { col: 'bought',  dir: 'desc' },
   not_claimed: { col: 'address', dir: 'asc'  },
 };
+document.getElementById('tlMode').addEventListener('change', (e) => {
+  _tlMode = e.target.value;
+  redrawTimeline();
+});
+
 document.getElementById('filterBucket').addEventListener('change', (e) => {
   drillSort = { ...(DEFAULT_SORT_FOR_BUCKET[e.target.value] || DEFAULT_SORT_FOR_BUCKET.held) };
   drillPage = 0;

@@ -321,6 +321,7 @@ def build_timeline():
     batchers = [b.lower() for b in json.loads(get_state("batch_senders") or "[]")]
     dex = {d.lower() for d in json.loads(get_state("dex_addresses") or "[]")}
     distrib = _all_claim_proxies() + batchers
+    STAKING = {"0x42bfaaa203b8259270a1b5ef4576db6b8359daa1"}  # MegaStakingProxy
 
     buckets = {}
     for r in conn.execute(
@@ -329,10 +330,15 @@ def build_timeline():
         ts = r["timestamp"]
         if not ts: continue
         hour = ts[:13]
-        b = buckets.setdefault(hour, {"claims":0,"sells":0,"buys":0,"n_claim":0,"n_sell":0,"n_buy":0})
+        b = buckets.setdefault(hour, {
+            "claims":0, "sells":0, "buys":0, "stakes":0,
+            "n_claim":0, "n_sell":0, "n_buy":0, "n_stake":0,
+        })
         v = int(r["value"])
         if r["from_addr"] in distrib:
             b["claims"] += v; b["n_claim"] += 1
+        elif r["to_addr"] in STAKING:
+            b["stakes"] += v; b["n_stake"] += 1
         elif r["from_addr"] in dex:
             b["buys"]   += v; b["n_buy"]   += 1
         elif r["to_addr"] in dex:
@@ -342,13 +348,15 @@ def build_timeline():
     for hour in sorted(buckets):
         b = buckets[hour]
         series.append({
-            "hour": hour,
-            "claims_mega": round(b["claims"] / 10**18, 2),
-            "sells_mega":  round(b["sells"]  / 10**18, 2),
-            "buys_mega":   round(b["buys"]   / 10**18, 2),
-            "n_claim":     b["n_claim"],
-            "n_sell":      b["n_sell"],
-            "n_buy":       b["n_buy"],
+            "hour":         hour,
+            "claims_mega":  round(b["claims"] / 10**18, 2),
+            "sells_mega":   round(b["sells"]  / 10**18, 2),
+            "buys_mega":    round(b["buys"]   / 10**18, 2),
+            "stakes_mega":  round(b["stakes"] / 10**18, 2),
+            "n_claim":      b["n_claim"],
+            "n_sell":       b["n_sell"],
+            "n_buy":        b["n_buy"],
+            "n_stake":      b["n_stake"],
         })
     return {"series": series}
 
