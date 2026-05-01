@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MEGA · Holder Analytics · Hanyon</title>
+<style>
+  @font-face { font-family:'WudooMono'; src:url('/static/fonts/e2542b709b225903-s.p.otf') format('opentype'); font-display:swap; }
+  @font-face { font-family:'WudooMonoAlt'; src:url('/static/fonts/f15252ffd0d82297-s.p.ttf') format('truetype'); font-display:swap; }
+
+  :root {
+    --black:#1a1a1b; --panel:#19191a; --panel-2:#232325;
+    --white:#dfd9d9; --white-60:#ece8e8; --white-40:hsla(0,9%,86%,.4); --white-20:hsla(0,9%,86%,.2);
+    --text2:#7e7e7e; --text3:#9b9595; --text5:#cbc5c5;
+    --line:rgba(203,197,197,.13); --line-2:rgba(203,197,197,.22);
+    --theme:#aef54c;
+    --held:var(--white); --sold:#b8a4a4; --bought:#7a7a8a; --pending:#4a4a4a; --locked:#65656a;
+  }
+
+  * { box-sizing:border-box; border-color:var(--line); }
+  html, body { margin:0; background:var(--black); color:var(--white); }
+  body { font:14px/1.5 'WudooMono', ui-monospace, Menlo, monospace; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility; }
+  a { color:inherit; text-decoration:none; }
+  ::selection { background:var(--white); color:var(--black); }
+
+  .wrap { max-width:1286px; margin:0 auto; padding:32px 32px 80px; }
+
+  /* Header */
+  .head { display:flex; justify-content:space-between; align-items:center; padding-bottom:14px; margin-bottom:32px; border-bottom:1px solid var(--line); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; }
+  .head .brand { display:flex; align-items:center; gap:14px; color:var(--white); }
+  .head .meta { display:flex; gap:22px; align-items:center; color:var(--text3); }
+  .head .meta .by { color:var(--text3); }
+  .head .meta .by b { color:var(--white); font-weight:500; }
+  .head .meta .live { color:var(--white); }
+  .head .meta .live.idx { color:var(--theme); }
+
+  /* Section heads */
+  section { margin-top:48px; }
+  .h-row { margin-bottom:18px; }
+  .h-row h2 { margin:0; font-size:13px; font-weight:500; text-transform:uppercase; letter-spacing:0.12em; color:var(--white); }
+  .bracket { color:var(--text3); margin-right:8px; }
+
+  /* Card */
+  .card {
+    background:var(--panel); border:1px solid var(--line); padding:26px 28px;
+    clip-path:polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+  }
+
+  /* TWO DONUTS SIDE BY SIDE */
+  .donut-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:760px) { .donut-grid { grid-template-columns:1fr; } }
+  .donut-card .ck { font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text3); margin-bottom:18px; }
+  .donut-wrap { display:grid; grid-template-columns:minmax(180px,200px) 1fr; gap:24px; align-items:center; }
+  @media (max-width:520px) { .donut-wrap { grid-template-columns:1fr; } }
+  .donut-legend { display:flex; flex-direction:column; gap:11px; }
+  .lr { display:grid; grid-template-columns:14px 1fr 90px 60px; gap:10px; align-items:center; }
+  .lr .sw { width:11px; height:11px; }
+  .lr .l { font-size:12px; color:var(--white); }
+  .lr .v { font-size:12px; color:var(--text3); text-align:right; }
+  .lr .p { font-size:12px; color:var(--white); text-align:right; font-weight:500; }
+  .verify-row { color:var(--text3); font-size:11px; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); }
+  .verify-row a { color:var(--text3); border-bottom:1px solid var(--line-2); padding-bottom:1px; transition:color .15s, border-color .15s; }
+  .verify-row a:hover { color:var(--theme); border-color:var(--theme); }
+
+  /* Per-round rows */
+  .rounds { display:grid; gap:1px; background:var(--line); border:1px solid var(--line); }
+  .round-row { background:var(--panel); padding:22px 26px; display:grid; grid-template-columns:1.5fr 110px 1fr 100px; gap:22px; align-items:center; }
+  @media (max-width:760px) { .round-row { grid-template-columns:1fr; gap:14px; padding:18px 20px; } }
+  .round-row .name { display:flex; align-items:center; gap:12px; }
+  .round-row .name .sq { width:9px; height:9px; flex-shrink:0; background:var(--white); }
+  .round-row .name .t { font-size:14px; color:var(--white); font-weight:500; }
+  .round-row .name .m { color:var(--text3); font-size:11px; margin-top:3px; }
+  .round-row .total { font-size:22px; font-weight:500; color:var(--white); letter-spacing:-0.01em; }
+  .round-row .total .small { font-size:10px; color:var(--text3); margin-left:4px; text-transform:uppercase; letter-spacing:0.06em; }
+  .round-row .stk { display:flex; height:14px; background:var(--panel-2); border:1px solid var(--line); }
+  .round-row .stk > div { transition:width .25s ease; }
+  .round-row .sub { font-size:11px; color:var(--text3); display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; }
+  .round-row .rate { text-align:right; font-size:26px; font-weight:500; letter-spacing:-0.01em; color:var(--white); }
+  .round-row .rate .lbl { display:block; font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.06em; font-weight:400; margin-top:2px; }
+
+  /* Time-series */
+  .timecard { position:relative; }
+  .timecard svg { display:block; width:100%; height:240px; }
+  .timecard .axis { font:10px 'WudooMono', monospace; fill:var(--text3); }
+  .timecard .grid { stroke:var(--line); stroke-width:1; }
+  .timecard .hover-rect { fill:transparent; cursor:crosshair; }
+  .timecard .hover-line { stroke:var(--white-40); stroke-width:1; stroke-dasharray:2,3; pointer-events:none; }
+  .timecard .point { stroke-width:2; fill:var(--black); pointer-events:none; }
+  .tooltip {
+    position:absolute; pointer-events:none; opacity:0; transition:opacity .12s ease;
+    background:var(--panel-2); border:1px solid var(--line-2); padding:10px 14px; min-width:180px;
+    font-size:11px; color:var(--white); z-index:10;
+    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+  .tooltip .when { color:var(--text3); text-transform:uppercase; letter-spacing:0.08em; font-size:10px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .tooltip .row { display:flex; justify-content:space-between; gap:14px; padding:2px 0; }
+  .tooltip .row .l { display:flex; align-items:center; gap:7px; color:var(--text5); }
+  .tooltip .row .sw { width:8px; height:8px; }
+  .tooltip .row .v { color:var(--white); font-weight:500; font-variant-numeric:tabular-nums; }
+  .stk-legend { display:flex; gap:22px; margin-top:14px; font-size:11px; color:var(--text3); flex-wrap:wrap; }
+
+  /* Controls */
+  .controls { display:flex; gap:8px; margin-bottom:14px; align-items:center; flex-wrap:wrap; }
+  .ctl { display:inline-flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--line); padding:7px 14px; }
+  .ctl label { font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text3); }
+  .ctl select, .ctl input {
+    background:transparent; color:var(--white); border:0; outline:none;
+    font:12px 'WudooMono', monospace; padding:2px 0; min-width:110px;
+  }
+  .ctl input.search { min-width:300px; }
+  .ctl select { -webkit-appearance:none; appearance:none; padding-right:14px;
+    background-image:linear-gradient(45deg, transparent 50%, var(--text3) 50%), linear-gradient(135deg, var(--text3) 50%, transparent 50%);
+    background-position:calc(100% - 8px) 50%, calc(100% - 4px) 50%; background-size:4px 4px; background-repeat:no-repeat; }
+  .ctl-spacer { flex:1; }
+  .ctl-hint { color:var(--text3); font-size:11px; }
+
+  /* Table */
+  .tablewrap { background:var(--panel); border:1px solid var(--line); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th, td { padding:11px 16px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; font-feature-settings:'tnum'; }
+  thead th { font-size:10px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:0.08em; background:var(--panel); position:sticky; top:0; cursor:pointer; user-select:none; }
+  th.sortable:hover { color:var(--white); }
+  th.sorted { color:var(--white); }
+  th.sorted::after { content:" ↓"; }
+  th.sorted.asc::after { content:" ↑"; }
+  tr:last-child td { border-bottom:0; }
+  td.l, th.l { text-align:left; }
+  td.dim { color:var(--text3); }
+  td a.addr { color:var(--white); border-bottom:1px solid var(--line-2); padding-bottom:1px; font-family:'WudooMono', monospace; transition:color .15s, border-color .15s; }
+  td a.addr:hover { border-color:var(--theme); color:var(--theme); }
+
+  /* Tags */
+  .tag { display:inline-block; padding:2px 8px; font:500 10px 'WudooMono', monospace; text-transform:uppercase; letter-spacing:0.06em; margin-right:4px; border:1px solid var(--line-2); color:var(--text3); }
+  .tag.fluffle, .tag.echo, .tag.private, .tag.held { color:var(--white); border-color:var(--white-40); }
+  .tag.sold { color:var(--text3); border-color:var(--line-2); }
+  .tag.tx { color:var(--text3); border-color:var(--line-2); transition:color .15s, border-color .15s; }
+  .tag.tx:hover { color:var(--theme); border-color:var(--theme); }
+  .tag.multi { color:var(--black); background:var(--white); border-color:var(--white); font-weight:600; }
+
+  /* Pagination */
+  .pager { display:flex; gap:14px; align-items:center; justify-content:flex-end; padding:18px 0 0; color:var(--text3); font-size:12px; }
+  .pager .info { font-feature-settings:'tnum'; }
+  .pager button { background:transparent; color:var(--white); border:1px solid var(--line-2); padding:6px 14px; font:500 11px 'WudooMono', monospace; text-transform:uppercase; letter-spacing:0.06em; cursor:pointer; transition:border-color .15s, color .15s; }
+  .pager button:hover:not(:disabled) { border-color:var(--theme); color:var(--theme); }
+  .pager button:disabled { opacity:.3; cursor:default; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="head">
+  <div class="brand">
+    <a href="https://www.megaeth.com/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;transition:opacity .15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+      <img src="/static/img/megaeth-light.svg" alt="MegaETH" style="height:18px;width:auto;display:block">
+    </a>
+    <span style="border-left:1px solid var(--line-2); padding-left:14px; color:var(--text3)">HOLDER ANALYTICS</span>
+  </div>
+  <div class="meta">
+    <span class="by">BY <a href="https://hanyon.app" target="_blank" rel="noopener" style="color:var(--white);border-bottom:1px solid var(--line-2);padding-bottom:1px;transition:color .15s,border-color .15s" onmouseover="this.style.color='var(--theme)';this.style.borderColor='var(--theme)'" onmouseout="this.style.color='var(--white)';this.style.borderColor='var(--line-2)'"><b>HANYON ANALYTICS</b></a></span>
+    <span id="mSync" class="live">● LIVE</span>
+  </div>
+</div>
+
+<!-- TWO DONUTS -->
+<section style="margin-top:0">
+  <div class="h-row">
+    <h2><span class="bracket">[◻]</span>WHO HELD, WHO SOLD</h2>
+  </div>
+  <div class="donut-grid">
+    <div class="card donut-card">
+      <div class="ck">By holder</div>
+      <div class="donut-wrap">
+        <div id="donutWallet"></div>
+        <div class="donut-legend" id="legendWallet"></div>
+      </div>
+    </div>
+    <div class="card donut-card">
+      <div class="ck">By volume</div>
+      <div class="donut-wrap">
+        <div id="donutVolume"></div>
+        <div class="donut-legend" id="legendVolume"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BY ROUND -->
+<section>
+  <div class="h-row">
+    <h2><span class="bracket">[◻]</span>BY ROUND</h2>
+  </div>
+  <div class="rounds" id="cohortList"></div>
+</section>
+
+<!-- ACTIVITY OVER TIME -->
+<section>
+  <div class="h-row">
+    <h2><span class="bracket">[◻]</span>ACTIVITY OVER TIME</h2>
+  </div>
+  <div class="card timecard">
+    <svg id="timeline" viewBox="0 0 1200 240" preserveAspectRatio="none"></svg>
+    <div class="tooltip" id="tooltip"></div>
+    <div class="stk-legend" style="margin-top:8px">
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--white);margin-right:6px"></span>Claims received</div>
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--sold);margin-right:6px"></span>Sells to DEX</div>
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--bought);margin-right:6px"></span>Buys from DEX</div>
+    </div>
+  </div>
+</section>
+
+<!-- ADDRESSES (search + paginated table) -->
+<section>
+  <div class="h-row">
+    <h2><span class="bracket">[◻]</span>ADDRESSES</h2>
+  </div>
+  <div class="controls">
+    <div class="ctl">
+      <label>Behavior</label>
+      <select id="filterBucket">
+        <option value="all" selected>All eligible</option>
+        <option value="held">Holding</option>
+        <option value="staked">Staked</option>
+        <option value="sold">Sold</option>
+        <option value="bought_more">Bought more</option>
+        <option value="not_claimed">Not claimed</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label>Round</label>
+      <select id="filterCohort">
+        <option value="">All</option>
+        <option value="fluffle">Fluffle</option>
+        <option value="echo">Conviction</option>
+        <option value="private">Echo private</option>
+        <option value="multi">Multi-round</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label>Search</label>
+      <input id="filterSearch" class="search" type="text" placeholder="0x… (substring)">
+    </div>
+    <div class="ctl-spacer"></div>
+    <span class="ctl-hint" id="drillHint"></span>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead id="drillHead"></thead>
+      <tbody id="drillRows"></tbody>
+    </table>
+  </div>
+  <div class="pager" id="drillPager"></div>
+</section>
+
+</div>
+
+<script>
+const fmt = n => {
+  const x = Number(n);
+  if (!isFinite(x)) return n;
+  if (x === 0) return '0';
+  if (Math.abs(x) >= 1e9) return (x/1e9).toLocaleString(undefined,{maximumFractionDigits:2}) + 'B';
+  if (Math.abs(x) >= 1e6) return (x/1e6).toLocaleString(undefined,{maximumFractionDigits:2}) + 'M';
+  if (Math.abs(x) >= 1e3) return (x/1e3).toLocaleString(undefined,{maximumFractionDigits:2}) + 'K';
+  if (x >= 1) return x.toLocaleString(undefined,{maximumFractionDigits:2});
+  return x.toLocaleString(undefined,{maximumFractionDigits:6});
+};
+const fmtInt = n => Number(n).toLocaleString();
+const short = a => a.slice(0,8) + '…' + a.slice(-6);
+const expAddr = a => `https://megaeth.blockscout.com/address/${a}`;
+const expTx   = h => `https://megaeth.blockscout.com/tx/${h}`;
+
+// Donut
+function donut(segments, centerVal, centerLabel, size=200) {
+  const total = segments.reduce((a,s)=>a+s.value, 0) || 1;
+  const r = 70, sw = 20, c = size/2;
+  const C = 2 * Math.PI * r;
+  let off = 0;
+  const arcs = segments.map(s => {
+    const len = s.value/total * C;
+    const a = `<circle r="${r}" cx="${c}" cy="${c}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${c} ${c})"/>`;
+    off += len;
+    return a;
+  }).join('');
+  return `
+    <svg viewBox="0 0 ${size} ${size}" style="width:100%;max-width:${size}px;height:${size}px;display:block">
+      <circle r="${r}" cx="${c}" cy="${c}" fill="none" stroke="var(--panel-2)" stroke-width="${sw}"/>
+      ${arcs}
+      <text x="${c}" y="${c-6}" text-anchor="middle" fill="var(--text3)" font-size="9" letter-spacing="2.5" style="text-transform:uppercase;font-family:WudooMono">${centerLabel}</text>
+      <text x="${c}" y="${c+22}" text-anchor="middle" fill="var(--white)" font-size="32" font-weight="500" letter-spacing="-1" style="font-family:WudooMono">${centerVal}</text>
+    </svg>`;
+}
+
+// Timeline with hover tooltip
+let _tlSeries = [];
+function renderTimeline(series) {
+  if (!series.length) return;
+  const svg = document.getElementById('timeline');
+  const W = 1200, H = 240, padL = 50, padR = 14, padT = 14, padB = 32;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+
+  const active = series.filter(s => s.n_claim + s.n_sell + s.n_buy > 0);
+  if (!active.length) return;
+  _tlSeries = active;
+  const maxN = Math.max(...active.map(s => Math.max(s.n_claim, s.n_sell, s.n_buy)));
+  const x = i => padL + (i / Math.max(1, active.length-1)) * innerW;
+  const y = v => padT + innerH - (v / maxN) * innerH;
+
+  const linePath = (key, color) => {
+    let d = '';
+    active.forEach((s, i) => { d += (i===0 ? `M ${x(i)} ${y(s[key])}` : ` L ${x(i)} ${y(s[key])}`); });
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+  };
+  const areaPath = (key, color) => {
+    let d = `M ${x(0)} ${y(0)}`;
+    active.forEach((s, i) => { d += ` L ${x(i)} ${y(s[key])}`; });
+    d += ` L ${x(active.length-1)} ${y(0)} Z`;
+    return `<path d="${d}" fill="${color}" opacity="0.10"/>`;
+  };
+
+  const gridY = [0.25, 0.5, 0.75, 1].map(t => {
+    const yp = padT + innerH * (1 - t);
+    return `<line class="grid" x1="${padL}" y1="${yp}" x2="${W-padR}" y2="${yp}"/>` +
+           `<text class="axis" x="${padL-8}" y="${yp+3}" text-anchor="end">${fmtInt(Math.round(maxN*t))}</text>`;
+  }).join('');
+  const ticks = [0, 0.33, 0.66, 1].map(t => {
+    const i = Math.round((active.length-1) * t);
+    const px = x(i);
+    const ts = active[i].hour.replace('T', ' ') + ':00';
+    return `<text class="axis" x="${px}" y="${H-12}" text-anchor="middle">${ts.slice(5,16)}</text>`;
+  }).join('');
+
+  // Hover zones — invisible rects per data point
+  const segW = active.length > 1 ? innerW / (active.length - 1) : innerW;
+  const hovers = active.map((s, i) =>
+    `<rect class="hover-rect" data-i="${i}" x="${x(i) - segW/2}" y="${padT}" width="${segW}" height="${innerH}"/>`
+  ).join('');
+
+  svg.innerHTML = `
+    ${gridY}
+    ${ticks}
+    ${areaPath('n_claim','var(--white)')}
+    ${areaPath('n_sell', 'var(--sold)')}
+    ${areaPath('n_buy',  'var(--bought)')}
+    ${linePath('n_buy',  'var(--bought)')}
+    ${linePath('n_sell', 'var(--sold)')}
+    ${linePath('n_claim','var(--white)')}
+    <line id="hoverLine" class="hover-line" style="display:none" x1="0" y1="${padT}" x2="0" y2="${padT+innerH}"/>
+    <circle id="ptClaim" class="point" r="4" stroke="var(--white)"  style="display:none"/>
+    <circle id="ptSell"  class="point" r="4" stroke="var(--sold)"   style="display:none"/>
+    <circle id="ptBuy"   class="point" r="4" stroke="var(--bought)" style="display:none"/>
+    ${hovers}
+  `;
+
+  const tooltip = document.getElementById('tooltip');
+  const hoverLine = svg.querySelector('#hoverLine');
+  const ptClaim = svg.querySelector('#ptClaim');
+  const ptSell  = svg.querySelector('#ptSell');
+  const ptBuy   = svg.querySelector('#ptBuy');
+
+  svg.querySelectorAll('.hover-rect').forEach(rect => {
+    rect.addEventListener('mouseenter', (e) => {
+      const i = parseInt(rect.dataset.i, 10);
+      const s = active[i];
+      const px = x(i);
+      // Move dashed line + points
+      hoverLine.setAttribute('x1', px); hoverLine.setAttribute('x2', px);
+      hoverLine.style.display = '';
+      ptClaim.setAttribute('cx', px); ptClaim.setAttribute('cy', y(s.n_claim)); ptClaim.style.display = '';
+      ptSell.setAttribute('cx', px);  ptSell.setAttribute('cy', y(s.n_sell));  ptSell.style.display = '';
+      ptBuy.setAttribute('cx', px);   ptBuy.setAttribute('cy', y(s.n_buy));    ptBuy.style.display = '';
+      // Position tooltip via SVG coordinate → DOM coordinate
+      const card = svg.parentElement;
+      const cardRect = card.getBoundingClientRect();
+      const xRatio = px / W;
+      const ttX = xRatio * cardRect.width;
+      const ttY = (padT + 8) / H * cardRect.height;
+      const ttWidth = 220;
+      const left = Math.min(cardRect.width - ttWidth - 16, Math.max(8, ttX - ttWidth/2));
+      tooltip.style.left = left + 'px';
+      tooltip.style.top  = ttY + 'px';
+      tooltip.innerHTML = `
+        <div class="when">${s.hour.replace('T',' ')}:00 UTC</div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--white)"></span>Claims</span><span class="v">${fmtInt(s.n_claim)}</span></div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--sold)"></span>Sells</span><span class="v">${fmtInt(s.n_sell)}</span></div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--bought)"></span>Buys</span><span class="v">${fmtInt(s.n_buy)}</span></div>
+        <div class="row" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--line)"><span class="l">MEGA flow</span><span class="v">${fmt(s.claims_mega + s.sells_mega + s.buys_mega)}</span></div>
+      `;
+      tooltip.style.opacity = '1';
+    });
+  });
+  svg.addEventListener('mouseleave', () => {
+    tooltip.style.opacity = '0';
+    hoverLine.style.display = 'none';
+    ptClaim.style.display = 'none'; ptSell.style.display = 'none'; ptBuy.style.display = 'none';
+  });
+}
+
+// Load + render
+let _data = null;
+async function load() {
+  const [sum, beh, elig, tl] = await Promise.all([
+    fetch('/api/summary').then(r=>r.json()),
+    fetch('/api/behavior?limit=20000').then(r=>r.json()),
+    fetch('/api/eligibility').then(r=>r.json()),
+    fetch('/api/timeline').then(r=>r.json()),
+  ]);
+  _data = { sum, beh, elig, tl };
+  render();
+}
+
+function render() {
+  const { sum, beh, elig, tl } = _data;
+  const t = beh.totals;
+  const tm = beh.totals_mega;
+
+  // Sync indicator
+  const syncing = !!sum.sync.next_page_params;
+  const syncEl = document.getElementById('mSync');
+  syncEl.textContent = syncing ? '● INDEXING' : '● LIVE';
+  syncEl.className = 'live' + (syncing ? ' idx' : '');
+
+  // Derived numbers
+  const claimers = t.held + t.sold + t.bought_more;
+  const heldPct  = claimers ? (t.held/claimers*100) : 0;
+  const soldPct  = claimers ? (t.sold/claimers*100) : 0;
+  const boughtPct= claimers ? (t.bought_more/claimers*100) : 0;
+  const heldM = parseFloat(tm.held.current);
+  const soldM = parseFloat(tm.sold.sold);
+  const boughtM = parseFloat(tm.bought_more.bought);
+  const totM  = heldM + soldM + boughtM;
+  const heldMPct = totM ? (heldM/totM*100) : 0;
+  const soldMPct = totM ? (soldM/totM*100) : 0;
+  const boughtMPct = totM ? (boughtM/totM*100) : 0;
+
+  // Recompute denominators including staked
+  const stakedN = t.staked || 0;
+  const claimersAll = t.held + t.sold + t.bought_more + stakedN;
+  const heldPctNew  = claimersAll ? (t.held/claimersAll*100) : 0;
+  const soldPctNew  = claimersAll ? (t.sold/claimersAll*100) : 0;
+  const stakedPct   = claimersAll ? (stakedN/claimersAll*100) : 0;
+  const boughtPctNew= claimersAll ? (t.bought_more/claimersAll*100) : 0;
+
+  // Volume — pull staked MEGA from the staked bucket totals
+  const stakedM = parseFloat(((tm.staked || {}).staked) || '0');
+  const totMV = heldM + soldM + boughtM + stakedM;
+  const heldMPctNew   = totMV ? (heldM/totMV*100) : 0;
+  const soldMPctNew   = totMV ? (soldM/totMV*100) : 0;
+  const boughtMPctNew = totMV ? (boughtM/totMV*100) : 0;
+  const stakedMPctNew = totMV ? (stakedM/totMV*100) : 0;
+
+  // DONUT 1 — by holder
+  document.getElementById('donutWallet').innerHTML = donut(
+    [{value:t.held,        color:'var(--white)'},
+     {value:stakedN,       color:'var(--theme)'},
+     {value:t.bought_more, color:'var(--bought)'},
+     {value:t.sold,        color:'var(--sold)'}],
+    (heldPctNew + stakedPct).toFixed(0) + '%', 'HOLD+STAKE'
+  );
+  const lr = (color, label, value, pct) => `
+    <div class="lr">
+      <span class="sw" style="background:${color}"></span>
+      <span class="l">${label}</span>
+      <span class="v">${value}</span>
+      <span class="p">${pct}</span>
+    </div>`;
+  document.getElementById('legendWallet').innerHTML =
+    lr('var(--white)',  'Holding',     fmtInt(t.held),          heldPctNew.toFixed(1)+'%')
+  + lr('var(--theme)',  'Staked',      fmtInt(stakedN),         stakedPct.toFixed(1)+'%')
+  + lr('var(--bought)', 'Bought more', fmtInt(t.bought_more),   boughtPctNew.toFixed(1)+'%')
+  + lr('var(--sold)',   'Sold',        fmtInt(t.sold),          soldPctNew.toFixed(1)+'%');
+
+  // DONUT 2 — by volume
+  document.getElementById('donutVolume').innerHTML = donut(
+    [{value:heldM,   color:'var(--white)'},
+     {value:stakedM, color:'var(--theme)'},
+     {value:boughtM, color:'var(--bought)'},
+     {value:soldM,   color:'var(--sold)'}],
+    (heldMPctNew + stakedMPctNew).toFixed(0) + '%', 'STILL ON-CHAIN'
+  );
+  document.getElementById('legendVolume').innerHTML =
+    lr('var(--white)',  'In wallets',  fmt(heldM),    heldMPctNew.toFixed(1)+'%')
+  + lr('var(--theme)',  'Staked',      fmt(stakedM),  stakedMPctNew.toFixed(1)+'%')
+  + lr('var(--bought)', 'Bought back', fmt(boughtM),  boughtMPctNew.toFixed(1)+'%')
+  + lr('var(--sold)',   'Sold to DEX', fmt(soldM),    soldMPctNew.toFixed(1)+'%');
+
+  // ROUNDS
+  const cohortMeta = {
+    fluffle:      {label:'Fluffle Round',        note:'NFT holders · 50% auto-delivered today, 50% vests 6mo'},
+    conviction:   {label:'Conviction Round',     note:'Public sale winners · auto-delivered (or Apr 30 2027 if 1yr lockup)'},
+    echo_private: {label:'Echo Round (private)', note:'1:1 private investors · claim via Echo platform'},
+    other:        {label:'Mainnet / other',      note:'Batcher recipients outside the three named rounds'},
+  };
+  const order = ['fluffle','conviction','echo_private','other'];
+  document.getElementById('cohortList').innerHTML = order.map(k => {
+    const rd = (beh.rounds || {})[k];
+    if (!rd || rd.members === 0) return '';
+    const bk = rd.buckets;
+    const n = rd.members;
+    const c = cohortMeta[k];
+    const stakeN = bk.staked || 0;
+    const heldP   = n ? bk.held/n*100 : 0;
+    const soldP   = n ? bk.sold/n*100 : 0;
+    const stakeP  = n ? stakeN/n*100 : 0;
+    const boughtP = n ? bk.bought_more/n*100 : 0;
+    const pendP   = n ? bk.pending/n*100 : 0;
+    const lockP   = n ? bk.locked_2027/n*100 : 0;
+    const rate = rd.hold_rate;
+    const sub = [];
+    if (bk.held)        sub.push(`<span style="color:var(--white)">└ ${fmtInt(bk.held)} held</span>`);
+    if (stakeN)         sub.push(`<span style="color:var(--theme)">└ ${fmtInt(stakeN)} staked</span>`);
+    if (bk.sold)        sub.push(`<span style="color:var(--sold)">└ ${fmtInt(bk.sold)} sold</span>`);
+    if (bk.bought_more) sub.push(`<span style="color:var(--bought)">└ ${fmtInt(bk.bought_more)} bought more</span>`);
+    if (bk.pending)     sub.push(`<span style="color:var(--text2)">└ ${fmtInt(bk.pending)} pending</span>`);
+    if (bk.locked_2027) sub.push(`<span style="color:var(--locked)">└ ${fmtInt(bk.locked_2027)} locked → 2027</span>`);
+    return `
+      <div class="round-row">
+        <div class="name">
+          <span class="sq"></span>
+          <div>
+            <div class="t">${c.label}</div>
+            <div class="m">${c.note}</div>
+          </div>
+        </div>
+        <div class="total">${fmtInt(n)}<span class="small">alloc</span></div>
+        <div>
+          <div class="stk">
+            <div title="Held ${heldP.toFixed(1)}%"        style="background:var(--white);width:${heldP}%"></div>
+            <div title="Staked ${stakeP.toFixed(1)}%"     style="background:var(--theme);width:${stakeP}%"></div>
+            <div title="Sold ${soldP.toFixed(1)}%"        style="background:var(--sold);width:${soldP}%"></div>
+            <div title="Bought ${boughtP.toFixed(1)}%"    style="background:var(--bought);width:${boughtP}%"></div>
+            <div title="Pending ${pendP.toFixed(1)}%"     style="background:var(--pending);width:${pendP}%"></div>
+            <div title="Locked 2027 ${lockP.toFixed(1)}%" style="background:var(--locked);width:${lockP}%"></div>
+          </div>
+          <div class="sub">${sub.join('')}</div>
+        </div>
+        <div class="rate">${rate.toFixed(0)}%<span class="lbl">hold rate</span></div>
+      </div>`;
+  }).join('');
+
+  // Timeline
+  if (tl && tl.series) renderTimeline(tl.series);
+
+  // Drill table
+  renderDrill();
+}
+
+// Drill table — search, sort, paginate by 100
+let drillSort = { col: 'current', dir: 'desc' };
+let drillPage = 0;
+const PAGE_SIZE = 100;
+
+function renderDrill() {
+  if (!_data) return;
+  const bucket = document.getElementById('filterBucket').value;
+  const cohort = document.getElementById('filterCohort').value;
+  const search = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
+
+  // "All" merges every bucket; otherwise pick the specific one. Tag each
+  // row with its source bucket so we can render a Behavior column.
+  let rows;
+  if (bucket === 'all') {
+    rows = [
+      ...((_data.beh.rows.held || []).map(r => ({...r, _bucket:'held'}))),
+      ...((_data.beh.rows.staked || []).map(r => ({...r, _bucket:'staked'}))),
+      ...((_data.beh.rows.sold || []).map(r => ({...r, _bucket:'sold'}))),
+      ...((_data.beh.rows.bought_more || []).map(r => ({...r, _bucket:'bought_more'}))),
+      ...((_data.beh.rows.not_claimed || []).map(r => ({...r, _bucket:'not_claimed'}))),
+    ];
+  } else {
+    rows = _data.beh.rows[bucket] || [];
+  }
+  if (cohort === 'fluffle') rows = rows.filter(r => r.in_fluffle);
+  if (cohort === 'echo')    rows = rows.filter(r => r.in_echo_winners);
+  if (cohort === 'private') rows = rows.filter(r => r.in_echo_private);
+  if (cohort === 'multi')   rows = rows.filter(r => r.n_rounds > 1);
+  if (search)               rows = rows.filter(r => r.address.toLowerCase().includes(search));
+
+  // Sort
+  const num = v => v == null ? -Infinity : (typeof v === 'number' ? v : parseFloat(v));
+  rows = [...rows].sort((a, b) => {
+    const k = drillSort.col;
+    const av = (k === 'address') ? a[k] : num(a[k]);
+    const bv = (k === 'address') ? b[k] : num(b[k]);
+    if (av < bv) return drillSort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return drillSort.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (drillPage >= totalPages) drillPage = totalPages - 1;
+  if (drillPage < 0) drillPage = 0;
+  const slice = rows.slice(drillPage * PAGE_SIZE, (drillPage + 1) * PAGE_SIZE);
+
+  const head = document.getElementById('drillHead');
+  const body = document.getElementById('drillRows');
+  const pager = document.getElementById('drillPager');
+
+  const tagMap = {
+    fluffle: '<span class="tag fluffle">Fluffle</span>',
+    conviction: '<span class="tag echo">Conviction</span>',
+    echo_private: '<span class="tag private">Echo private</span>',
+    other: '<span class="tag">Other</span>',
+  };
+
+  if (bucket === 'not_claimed') {
+    head.innerHTML = `<tr>
+      <th class="l sortable ${drillSort.col==='address'?'sorted'+(drillSort.dir==='asc'?' asc':''):''}" data-col="address">Address</th>
+      <th class="l">Reason</th>
+      <th class="l">Round</th>
+      <th class="l">Verify</th>
+    </tr>`;
+    body.innerHTML = slice.map(r => {
+      // Compact round labels for the table; full names go in the title tooltip
+      const ROUND_SHORT = { fluffle:'FL', conviction:'CV', echo_private:'EP', other:'OT' };
+      const ROUND_FULL  = { fluffle:'Fluffle Round', conviction:'Conviction Round', echo_private:'Echo private round', other:'Other / Mainnet' };
+      const fullList = (r.rounds || []).map(rd => ROUND_FULL[rd] || rd).join(' + ');
+      const tags = (r.rounds || []).length === 0
+        ? ''
+        : (r.rounds || []).length <= 2
+          ? (r.rounds || []).map(rd => `<span class="tag ${rd}" title="${ROUND_FULL[rd]||rd}">${ROUND_FULL[rd]||rd}</span>`).join('')
+          : `<span class="tag multi" title="${fullList}">${(r.rounds || []).map(rd => ROUND_SHORT[rd]||rd).join(' + ')}</span>`;
+      const stack = '';  // count is implicit from the tag list
+      return `
+        <tr>
+          <td class="l"><a class="addr" href="${expAddr(r.address)}" target="_blank">${short(r.address)}</a></td>
+          <td class="l dim">${r.pending_reason || '—'}</td>
+          <td class="l">${tags}${stack}</td>
+          <td class="l"><a class="tag tx" href="${expAddr(r.address)}" target="_blank">view</a></td>
+        </tr>`;
+    }).join('');
+  } else {
+    const showBehavior = bucket === 'all';
+    const cols = [
+      {k:'address', label:'Address', l:true},
+      ...(showBehavior ? [{k:'behavior', label:'Behavior', l:true, nosort:true}] : []),
+      {k:'claimed', label:'Claimed'},
+      {k:'bought',  label:'Bought'},
+      {k:'sold',    label:'Sold'},
+      {k:'staked',  label:'Staked'},
+      {k:'sold_pct',label:'% Sold'},
+      {k:'current', label:'Current'},
+      {k:'source',  label:'Rounds', l:true, nosort:true},
+      {k:'tx',      label:'Verify', l:true, nosort:true},
+    ];
+    head.innerHTML = `<tr>${cols.map(c => {
+      const cls = (c.l?'l ':'') + (c.nosort?'':'sortable ') + (drillSort.col===c.k?'sorted':'') + (drillSort.col===c.k && drillSort.dir==='asc'?' asc':'');
+      return `<th class="${cls.trim()}" data-col="${c.k}">${c.label}</th>`;
+    }).join('')}</tr>`;
+
+    const soldPctColor = p =>
+      p == null ? 'var(--text3)' :
+      p >= 90 ? 'var(--sold)' :
+      p >= 50 ? 'var(--text5)' :
+      'var(--white)';
+
+    const behaviorTag = b => {
+      const map = {
+        held:        '<span class="tag held">Holding</span>',
+        staked:      '<span class="tag" style="color:var(--theme);border-color:var(--theme)">Staked</span>',
+        sold:        '<span class="tag sold">Sold</span>',
+        bought_more: '<span class="tag">Bought+</span>',
+        not_claimed: '<span class="tag" style="color:var(--locked);border-color:var(--locked)">Pending</span>',
+      };
+      return map[b] || '';
+    };
+    body.innerHTML = slice.map(r => {
+      // Compact round labels for the table; full names go in the title tooltip
+      const ROUND_SHORT = { fluffle:'FL', conviction:'CV', echo_private:'EP', other:'OT' };
+      const ROUND_FULL  = { fluffle:'Fluffle Round', conviction:'Conviction Round', echo_private:'Echo private round', other:'Other / Mainnet' };
+      const fullList = (r.rounds || []).map(rd => ROUND_FULL[rd] || rd).join(' + ');
+      const tags = (r.rounds || []).length === 0
+        ? ''
+        : (r.rounds || []).length <= 2
+          ? (r.rounds || []).map(rd => `<span class="tag ${rd}" title="${ROUND_FULL[rd]||rd}">${ROUND_FULL[rd]||rd}</span>`).join('')
+          : `<span class="tag multi" title="${fullList}">${(r.rounds || []).map(rd => ROUND_SHORT[rd]||rd).join(' + ')}</span>`;
+      const stack = '';  // count is implicit from the tag list
+      const sp = r.sold_pct;
+      const spDisplay = sp == null ? '<span class="dim">—</span>' : `<span style="color:${soldPctColor(sp)};font-weight:500">${sp.toFixed(0)}%</span>`;
+      const behaviorCell = showBehavior ? `<td class="l">${behaviorTag(r._bucket)}</td>` : '';
+      const stakedNum = Number(r.staked || 0);
+      return `
+        <tr>
+          <td class="l"><a class="addr" href="${expAddr(r.address)}" target="_blank">${short(r.address)}</a></td>
+          ${behaviorCell}
+          <td class="${Number(r.claimed)===0?'dim':''}">${fmt(r.claimed)}</td>
+          <td class="${Number(r.bought)===0?'dim':''}">${fmt(r.bought)}</td>
+          <td class="${Number(r.sold)===0?'dim':''}">${fmt(r.sold)}</td>
+          <td class="${stakedNum===0?'dim':''}" style="${stakedNum>0?'color:var(--theme)':''}">${fmt(r.staked || 0)}</td>
+          <td>${spDisplay}</td>
+          <td>${fmt(r.current)}</td>
+          <td class="l">${tags}${stack}</td>
+          <td class="l"><a class="tag tx" href="${expAddr(r.address)}#tokentxns" target="_blank">txs</a></td>
+        </tr>`;
+    }).join('');
+  }
+
+  // Wire sort headers
+  head.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.col;
+    if (drillSort.col === k) drillSort.dir = drillSort.dir === 'desc' ? 'asc' : 'desc';
+    else { drillSort.col = k; drillSort.dir = (k === 'address') ? 'asc' : 'desc'; }
+    drillPage = 0;
+    renderDrill();
+  }));
+
+  // Pager
+  const start = total ? drillPage * PAGE_SIZE + 1 : 0;
+  const end = Math.min(total, (drillPage + 1) * PAGE_SIZE);
+  pager.innerHTML = `
+    <span class="info">${fmtInt(start)}–${fmtInt(end)} OF ${fmtInt(total)}</span>
+    <button id="prevBtn" ${drillPage===0?'disabled':''}>← PREV</button>
+    <span class="info">PAGE ${drillPage+1} / ${totalPages}</span>
+    <button id="nextBtn" ${drillPage>=totalPages-1?'disabled':''}>NEXT →</button>`;
+  document.getElementById('prevBtn').addEventListener('click', () => { drillPage = Math.max(0, drillPage-1); renderDrill(); });
+  document.getElementById('nextBtn').addEventListener('click', () => { drillPage = Math.min(totalPages-1, drillPage+1); renderDrill(); });
+
+  document.getElementById('drillHint').textContent = `${fmtInt(total)} rows · sorted by ${drillSort.col} ${drillSort.dir}`;
+}
+
+// Pick a sensible default sort per bucket — sorting Sold within Held shows
+// nothing (all zeros by definition), so reset on bucket change.
+const DEFAULT_SORT_FOR_BUCKET = {
+  all:         { col: 'current', dir: 'desc' },
+  held:        { col: 'current', dir: 'desc' },
+  staked:      { col: 'staked',  dir: 'desc' },
+  sold:        { col: 'sold',    dir: 'desc' },
+  bought_more: { col: 'bought',  dir: 'desc' },
+  not_claimed: { col: 'address', dir: 'asc'  },
+};
+document.getElementById('filterBucket').addEventListener('change', (e) => {
+  drillSort = { ...(DEFAULT_SORT_FOR_BUCKET[e.target.value] || DEFAULT_SORT_FOR_BUCKET.held) };
+  drillPage = 0;
+  renderDrill();
+});
+document.getElementById('filterCohort').addEventListener('change', () => { drillPage = 0; renderDrill(); });
+document.getElementById('filterSearch').addEventListener('input', () => { drillPage = 0; renderDrill(); });
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>

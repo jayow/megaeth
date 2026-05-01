@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd plist for the hourly MEGA holder-analytics update.
+
+  Install (one-time):
+    cp com.hanyon.megaeth.update.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.hanyon.megaeth.update.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.hanyon.megaeth.update.plist
+    rm ~/Library/LaunchAgents/com.hanyon.megaeth.update.plist
+
+  Tail logs:
+    tail -f /tmp/megaeth-update.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.hanyon.megaeth.update</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/jakeolaso/Downloads/Claude Projects/megaeth/venv/bin/python</string>
+    <string>/Users/jakeolaso/Downloads/Claude Projects/megaeth/update.py</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/jakeolaso/Downloads/Claude Projects/megaeth</string>
+
+  <!-- Run every hour at :05 -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Minute</key>
+    <integer>5</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/megaeth-update.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/megaeth-update.log</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>
