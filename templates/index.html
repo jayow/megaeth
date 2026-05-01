@@ -317,7 +317,6 @@ function redrawTimeline() {
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
-  // Map mode → field names
   const fields = _tlMode === 'volume'
     ? { claim:'claims_mega', sell:'sells_mega', buy:'buys_mega', stake:'stakes_mega' }
     : { claim:'n_claim',     sell:'n_sell',     buy:'n_buy',     stake:'n_stake'    };
@@ -327,82 +326,76 @@ function redrawTimeline() {
   );
   if (!active.length) return;
 
+  // Stacked bar height = sum of the four series for that hour
   const maxN = Math.max(...active.map(s =>
-    Math.max(s[fields.claim]||0, s[fields.sell]||0, s[fields.buy]||0, s[fields.stake]||0)
+    (s[fields.claim]||0) + (s[fields.stake]||0) + (s[fields.sell]||0) + (s[fields.buy]||0)
   )) || 1;
-  const x = i => padL + (i / Math.max(1, active.length-1)) * innerW;
-  const y = v => padT + innerH - ((v||0) / maxN) * innerH;
 
-  const linePath = (key, color) => {
-    let d = '';
-    active.forEach((s, i) => { d += (i===0 ? `M ${x(i)} ${y(s[key])}` : ` L ${x(i)} ${y(s[key])}`); });
-    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
-  };
-  const areaPath = (key, color) => {
-    let d = `M ${x(0)} ${y(0)}`;
-    active.forEach((s, i) => { d += ` L ${x(i)} ${y(s[key])}`; });
-    d += ` L ${x(active.length-1)} ${y(0)} Z`;
-    return `<path d="${d}" fill="${color}" opacity="0.08"/>`;
-  };
+  const groupW = innerW / active.length;
+  const barW = Math.max(2, groupW * 0.7);          // 70% of slot, gap on either side
+  const xLeft = i => padL + i * groupW + (groupW - barW) / 2;
+  const yTop = v => padT + innerH - ((v||0) / maxN) * innerH;
+  const hOf  = v => innerH * ((v||0) / maxN);
 
-  // Y-axis labels: integer count or formatted MEGA
+  // Y-axis labels
   const yLabel = v => _tlMode === 'volume' ? fmt(v) : fmtInt(Math.round(v));
   const gridY = [0.25, 0.5, 0.75, 1].map(t => {
     const yp = padT + innerH * (1 - t);
     return `<line class="grid" x1="${padL}" y1="${yp}" x2="${W-padR}" y2="${yp}"/>` +
            `<text class="axis" x="${padL-8}" y="${yp+3}" text-anchor="end">${yLabel(maxN*t)}</text>`;
   }).join('');
+  // Sparse x-axis ticks (4 across)
   const ticks = [0, 0.33, 0.66, 1].map(t => {
     const i = Math.round((active.length-1) * t);
-    const px = x(i);
+    const px = xLeft(i) + barW/2;
     const ts = active[i].hour.replace('T', ' ') + ':00';
     return `<text class="axis" x="${px}" y="${H-12}" text-anchor="middle">${ts.slice(5,16)}</text>`;
   }).join('');
 
-  // Hover zones — invisible rects per data point
-  const segW = active.length > 1 ? innerW / (active.length - 1) : innerW;
+  // Stacked bar segments — order: claim (white) → stake (lime) → buy (purple) → sell (orange)
+  // (sell on top so it visually pops on busy hours)
+  const stackOrder = [
+    { k: fields.claim, color: 'var(--white)'  },
+    { k: fields.stake, color: 'var(--theme)'  },
+    { k: fields.buy,   color: 'var(--bought)' },
+    { k: fields.sell,  color: 'var(--sold)'   },
+  ];
+  const bars = active.map((s, i) => {
+    let acc = 0;  // running cumulative
+    return stackOrder.map(seg => {
+      const v = s[seg.k] || 0;
+      if (v === 0) return '';
+      const top = padT + innerH - hOf(acc + v);
+      const ht  = hOf(v);
+      const rect = `<rect x="${xLeft(i)}" y="${top}" width="${barW}" height="${ht}" fill="${seg.color}"/>`;
+      acc += v;
+      return rect;
+    }).join('');
+  }).join('');
+
+  // Hover zones span full group width
   const hovers = active.map((s, i) =>
-    `<rect class="hover-rect" data-i="${i}" x="${x(i) - segW/2}" y="${padT}" width="${segW}" height="${innerH}"/>`
+    `<rect class="hover-rect" data-i="${i}" x="${padL + i*groupW}" y="${padT}" width="${groupW}" height="${innerH}"/>`
   ).join('');
 
   svg.innerHTML = `
     ${gridY}
     ${ticks}
-    ${areaPath(fields.claim,'var(--white)')}
-    ${areaPath(fields.stake,'var(--theme)')}
-    ${areaPath(fields.sell, 'var(--sold)')}
-    ${areaPath(fields.buy,  'var(--bought)')}
-    ${linePath(fields.buy,  'var(--bought)')}
-    ${linePath(fields.sell, 'var(--sold)')}
-    ${linePath(fields.stake,'var(--theme)')}
-    ${linePath(fields.claim,'var(--white)')}
-    <line  id="hoverLine" class="hover-line" style="display:none" x1="0" y1="${padT}" x2="0" y2="${padT+innerH}"/>
-    <circle id="ptClaim" class="point" r="4" stroke="var(--white)"  style="display:none"/>
-    <circle id="ptStake" class="point" r="4" stroke="var(--theme)"  style="display:none"/>
-    <circle id="ptSell"  class="point" r="4" stroke="var(--sold)"   style="display:none"/>
-    <circle id="ptBuy"   class="point" r="4" stroke="var(--bought)" style="display:none"/>
+    ${bars}
+    <line id="hoverLine" class="hover-line" style="display:none" x1="0" y1="${padT}" x2="0" y2="${padT+innerH}"/>
     ${hovers}
   `;
 
   const tooltip = document.getElementById('tooltip');
   const hoverLine = svg.querySelector('#hoverLine');
-  const ptClaim = svg.querySelector('#ptClaim');
-  const ptStake = svg.querySelector('#ptStake');
-  const ptSell  = svg.querySelector('#ptSell');
-  const ptBuy   = svg.querySelector('#ptBuy');
-
   const fmtVal = v => _tlMode === 'volume' ? `${fmt(v)} MEGA` : fmtInt(v);
 
   svg.querySelectorAll('.hover-rect').forEach(rect => {
     rect.addEventListener('mouseenter', () => {
       const i = parseInt(rect.dataset.i, 10);
       const s = active[i];
-      const px = x(i);
+      const px = xLeft(i) + barW/2;
       hoverLine.setAttribute('x1', px); hoverLine.setAttribute('x2', px); hoverLine.style.display = '';
-      ptClaim.setAttribute('cx', px); ptClaim.setAttribute('cy', y(s[fields.claim])); ptClaim.style.display = '';
-      ptStake.setAttribute('cx', px); ptStake.setAttribute('cy', y(s[fields.stake])); ptStake.style.display = '';
-      ptSell.setAttribute('cx', px);  ptSell.setAttribute('cy', y(s[fields.sell]));   ptSell.style.display = '';
-      ptBuy.setAttribute('cx', px);   ptBuy.setAttribute('cy', y(s[fields.buy]));     ptBuy.style.display = '';
       const card = svg.parentElement;
       const cardRect = card.getBoundingClientRect();
       const xRatio = px / W;
@@ -412,15 +405,16 @@ function redrawTimeline() {
       const left = Math.min(cardRect.width - ttWidth - 16, Math.max(8, ttX - ttWidth/2));
       tooltip.style.left = left + 'px';
       tooltip.style.top  = ttY + 'px';
+      const total = (s[fields.claim]||0) + (s[fields.stake]||0) + (s[fields.sell]||0) + (s[fields.buy]||0);
       tooltip.innerHTML = `
         <div class="when">${s.hour.replace('T',' ')}:00 UTC · ${_tlMode === 'volume' ? 'volume' : 'count'}</div>
         <div class="row"><span class="l"><span class="sw" style="background:var(--white)"></span>Claims</span><span class="v">${fmtVal(s[fields.claim])}</span></div>
         <div class="row"><span class="l"><span class="sw" style="background:var(--theme)"></span>Staked</span><span class="v">${fmtVal(s[fields.stake])}</span></div>
-        <div class="row"><span class="l"><span class="sw" style="background:var(--sold)"></span>Sells</span><span class="v">${fmtVal(s[fields.sell])}</span></div>
         <div class="row"><span class="l"><span class="sw" style="background:var(--bought)"></span>Buys</span><span class="v">${fmtVal(s[fields.buy])}</span></div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--sold)"></span>Sells</span><span class="v">${fmtVal(s[fields.sell])}</span></div>
         <div class="row" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--line)">
           <span class="l">${_tlMode === 'volume' ? 'Total flow' : 'Total events'}</span>
-          <span class="v">${fmtVal((s[fields.claim]||0) + (s[fields.stake]||0) + (s[fields.sell]||0) + (s[fields.buy]||0))}</span>
+          <span class="v">${fmtVal(total)}</span>
         </div>
       `;
       tooltip.style.opacity = '1';
@@ -429,8 +423,6 @@ function redrawTimeline() {
   svg.addEventListener('mouseleave', () => {
     tooltip.style.opacity = '0';
     hoverLine.style.display = 'none';
-    ptClaim.style.display = 'none'; ptStake.style.display = 'none';
-    ptSell.style.display = 'none'; ptBuy.style.display = 'none';
   });
 }
 
