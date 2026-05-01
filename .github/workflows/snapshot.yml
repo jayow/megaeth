@@ -44,19 +44,27 @@ jobs:
           restore-keys: |
             mega-db-
 
-      # If no cached db, download the seed from a release artifact (or fall
-      # back to a fresh full sync). For now we just sync from scratch when
-      # missing — the resumable sync handles that fine, just takes longer.
-      - name: Show db status
+      # If the cache missed (first run, or cache evicted), download the
+      # seed snapshot from the GitHub release. This skips the ~10-min
+      # cold-start sync.
+      - name: Seed mega.db from release if cache missed
+        if: hashFiles('mega.db') == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -f mega.db ]; then
-            echo "Using cached mega.db ($(du -h mega.db | cut -f1))"
-            ./venv-noop python -c "
-            import sqlite3; c = sqlite3.connect('mega.db'); n = c.execute('SELECT COUNT(*) FROM transfers').fetchone()[0]; print(f'  {n:,} transfers in cache')
-            " 2>/dev/null || true
-          else
-            echo "No cached mega.db — will sync from scratch (~10 min for first run)"
-          fi
+          echo "No cached mega.db — pulling seed from release data-seed-v1"
+          gh release download data-seed-v1 -p mega.db.gz
+          gunzip mega.db.gz
+          echo "Seed restored ($(du -h mega.db | cut -f1))"
+
+      - name: Show db state
+        run: |
+          python -c "
+          import sqlite3
+          c = sqlite3.connect('mega.db')
+          n = c.execute('SELECT COUNT(*) FROM transfers').fetchone()[0]
+          print(f'  {n:,} transfers currently in mega.db')
+          "
 
       # Pull new MEGA Transfer events (resumable, paginated).
       - name: Sync transfers
