@@ -30,6 +30,26 @@ META_CACHE = {}
 # though they have high two-way activity.
 STAKING_ADDRS = {"0x42bfaaa203b8259270a1b5ef4576db6b8359daa1"}  # MegaStaking
 
+# DEX aggregators / routers that route trades through pools.
+# A transfer from a user TO one of these = a sell (the aggregator forwards
+# to the actual pool). Add new ones here as we identify them.
+KNOWN_AGGREGATORS = {
+    "0x956df8424b556f0076e8abf5481605f5a791cc7f": "MagpieRouterV3_1",
+}
+
+# EOAs that act as one-way MEGA sinks at significant scale — almost
+# certainly CEX deposit hot wallets (consolidate small inflows, send to
+# cold storage). Sending MEGA to one of these = a sell to a CEX.
+# Detected by heuristic: ≥100 unique senders, very low outflow uniqueness.
+KNOWN_CEX_SINKS = {
+    "0x7e3042bddcbf60928074ea0a5907c5ed5ae57e91": "CEX-like sink #1 (171M MEGA, 1,910 senders)",
+    "0x57b83aaff113ef81a729b63274ed6f17404c9ba6": "CEX-like sink #2 (59M MEGA, 285 senders)",
+    "0x1b158617ff3aa88f41439b20cdc50b03d0758fc3": "CEX-like sink #3 (51M MEGA, 430 senders)",
+    "0xc2cc15728b677343b7c330ca147b8b635d9b08c4": "CEX-like sink #4 (30M MEGA, 46 senders)",
+    "0x1ab4973a48dc892cd9971ece8e01dcc7688f8f23": "CEX-like sink #5 (27M MEGA, 108 senders)",
+    "0x700f1874314a4df3bb9a10f7b5ea187a39d8de74": "CEX-like sink #6 (5.7M MEGA, 303 senders)",
+}
+
 
 def fetch_address_meta(addr):
     if addr in META_CACHE:
@@ -62,7 +82,7 @@ def detect_distributors(conn):
         FROM transfers
         WHERE from_addr != ?
         GROUP BY from_addr
-        HAVING uniq >= ?
+        HAVING COUNT(DISTINCT to_addr) >= ?
         ORDER BY uniq DESC
         LIMIT 30
         """,
@@ -113,7 +133,7 @@ def detect_dex_addresses(conn, distributor_addrs):
     placeholders = ",".join("?" * len(skip)) if skip else "''"
     rows = conn.execute(
         f"""
-        SELECT addr, MIN(uin, uout) AS swap_score, uin, uout, n_in, n_out
+        SELECT addr, CASE WHEN uin < uout THEN uin ELSE uout END AS swap_score, uin, uout, n_in, n_out
         FROM (
             SELECT a.addr,
                    COALESCE(SUM(CASE WHEN t.to_addr   = a.addr THEN 1 ELSE 0 END), 0) AS n_in,
@@ -169,13 +189,24 @@ def run():
     print("\n=== Detecting DEX pair(s) ===")
     dex = detect_dex_addresses(conn, distributor_addrs)
 
+    # Sells go to: detected DEX pairs + known aggregators/routers + known CEX sinks.
+    sell_sinks = sorted(set(dex) | set(KNOWN_AGGREGATORS.keys()) | set(KNOWN_CEX_SINKS.keys()))
+    for a in KNOWN_AGGREGATORS:
+        upsert_meta(a, label="aggregator", is_contract=1, note=KNOWN_AGGREGATORS[a])
+    for a in KNOWN_CEX_SINKS:
+        upsert_meta(a, label="cex_sink", is_contract=0, note=KNOWN_CEX_SINKS[a])
+
     set_state("claim_contract",     echo_primary or "")
     set_state("distributor_proxies",json.dumps(echo_proxies))
     set_state("batch_senders",      json.dumps(batchers))
     set_state("other_distributors", json.dumps(others))
     set_state("distributors",       json.dumps(distributors))
-    set_state("dex_addresses",      json.dumps(sorted(dex)))
-    print(f"\nSaved: echo_proxies={echo_proxies}, batchers={batchers}, others={others}, dex={sorted(dex)}")
+    set_state("dex_addresses",      json.dumps(sell_sinks))   # combined sell venues
+    set_state("dex_pairs_only",     json.dumps(sorted(dex)))  # original AMM pairs
+    set_state("aggregators",        json.dumps(sorted(KNOWN_AGGREGATORS.keys())))
+    set_state("cex_sinks",          json.dumps(sorted(KNOWN_CEX_SINKS.keys())))
+    print(f"\nSaved: echo_proxies={echo_proxies}, batchers={batchers}, others={others}")
+    print(f"       sell_sinks (DEX + aggregators + CEX): {len(sell_sinks)} total")
 
 
 if __name__ == "__main__":

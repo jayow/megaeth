@@ -67,13 +67,13 @@ def per_address():
     ).fetchall()
 
     # Authoritative current balances from balanceOf() (if available)
-    has_truebal = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='true_balance'"
-    ).fetchone() is not None
+    # true_balance always exists (created by db.SCHEMA_STATEMENTS) — safe to query.
     true_bal = {}
-    if has_truebal:
+    try:
         for r in conn.execute("SELECT address, balance FROM true_balance"):
             true_bal[r["address"]] = int(r["balance"])
+    except Exception:
+        pass
 
     claimed = {}
     bought = {}

@@ -31,6 +31,38 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/debug")
+def api_debug():
+    """Expose runtime errors so we can diagnose Vercel deploy issues."""
+    import os, traceback
+    out = {
+        "python_version": os.environ.get("VERCEL_PYTHON_VERSION", "?"),
+        "has_database_url": bool(os.environ.get("DATABASE_URL")),
+        "database_url_prefix": (os.environ.get("DATABASE_URL") or "")[:25],
+        "checks": {},
+    }
+    try:
+        import psycopg2
+        out["checks"]["psycopg2_import"] = f"ok (v{psycopg2.__version__})"
+    except Exception as e:
+        out["checks"]["psycopg2_import"] = f"FAIL: {e}"
+    try:
+        from db import IS_POSTGRES, connect
+        out["checks"]["db_module_imports"] = "ok"
+        out["checks"]["IS_POSTGRES"] = IS_POSTGRES
+    except Exception as e:
+        out["checks"]["db_module_imports"] = f"FAIL: {e}\n{traceback.format_exc()[:500]}"
+        return jsonify(out), 500
+    try:
+        conn = connect()
+        n = conn.execute("SELECT COUNT(*) FROM transfers").fetchone()[0]
+        conn.close()
+        out["checks"]["db_query"] = f"ok ({n} transfers)"
+    except Exception as e:
+        out["checks"]["db_query"] = f"FAIL: {type(e).__name__}: {e}\n{traceback.format_exc()[:800]}"
+    return jsonify(out)
+
+
 @app.route("/api/summary")
 def api_summary():
     rows = get_rows()
@@ -220,10 +252,7 @@ def api_wallet(addr):
 
     # Did this wallet ever appear as receiver in Distributor.Claimed?
     claimed_events = []
-    has_claimed_table = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='megaeth_claimed'"
-    ).fetchone() is not None
-    if has_claimed_table:
+    if True:  # megaeth_claimed always exists (db.SCHEMA_STATEMENTS)
         for row in conn.execute(
             "SELECT block, distribution_uuid, entity_uuid, CAST(amount AS REAL)/1e18 AS m FROM megaeth_claimed WHERE receiver = ? ORDER BY block",
             (addr,),
@@ -353,9 +382,8 @@ def api_behavior():
 
     # ALSO: any Ethereum address whose entityUUID was used in a real claim
     # — this captures users who claimed to a different MegaETH wallet.
-    has_claims_table = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='megaeth_claimed'"
-    ).fetchone() is not None
+    # megaeth_claimed always exists (created by db.SCHEMA_STATEMENTS).
+    has_claims_table = True
     eth_addrs_who_claimed = set()
     receiver_wallets_via_claims = set()
     if has_claims_table:
