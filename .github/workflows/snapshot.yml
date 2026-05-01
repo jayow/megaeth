@@ -1,0 +1,89 @@
+name: Hourly snapshot
+
+# Runs hourly: pulls new MEGA transfers + balances + claims, regenerates
+# the JSON snapshots, commits them. Vercel auto-deploys on push.
+#
+# Persists the working SQLite (mega.db) across runs via GitHub Actions
+# cache so each run only fetches the delta since last sync.
+
+on:
+  schedule:
+    - cron: "0 * * * *"          # top of every hour UTC
+  workflow_dispatch:               # allow manual trigger from the UI
+
+permissions:
+  contents: write                  # so the job can git push the JSON files
+
+concurrency:
+  group: snapshot                  # only one snapshot run at a time
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      # Restore the SQLite from previous run (incremental sync)
+      - name: Restore mega.db cache
+        id: db-cache
+        uses: actions/cache@v4
+        with:
+          path: mega.db
+          key: mega-db-${{ github.run_id }}
+          restore-keys: |
+            mega-db-
+
+      # If no cached db, download the seed from a release artifact (or fall
+      # back to a fresh full sync). For now we just sync from scratch when
+      # missing — the resumable sync handles that fine, just takes longer.
+      - name: Show db status
+        run: |
+          if [ -f mega.db ]; then
+            echo "Using cached mega.db ($(du -h mega.db | cut -f1))"
+            ./venv-noop python -c "
+            import sqlite3; c = sqlite3.connect('mega.db'); n = c.execute('SELECT COUNT(*) FROM transfers').fetchone()[0]; print(f'  {n:,} transfers in cache')
+            " 2>/dev/null || true
+          else
+            echo "No cached mega.db — will sync from scratch (~10 min for first run)"
+          fi
+
+      # Pull new MEGA Transfer events (resumable, paginated).
+      - name: Sync transfers
+        run: python sync.py
+
+      # Re-detect distributors / DEX pairs / aggregators / CEX sinks.
+      - name: Classify
+        run: python classify.py
+
+      # Pull any new Distributor `Claimed` events on MegaETH.
+      - name: Pull Claimed events
+        run: python megaeth_claims.py
+        continue-on-error: true   # non-critical; snapshot can still build
+
+      # Build the 5 JSON snapshots into /static/data/
+      - name: Build snapshot
+        run: python snapshot.py
+
+      # Commit + push if anything changed
+      - name: Commit snapshots
+        run: |
+          git config user.name  "megaeth-snapshot[bot]"
+          git config user.email "snapshot@hanyon.app"
+          git add static/data/
+          if git diff --staged --quiet; then
+            echo "No changes — nothing to commit."
+          else
+            git commit -m "snapshot: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi

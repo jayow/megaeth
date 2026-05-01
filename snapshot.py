@@ -353,10 +353,18 @@ def build_timeline():
     return {"series": series}
 
 
-def run():
-    """Compute everything and write to cache. ONE big read of transfers."""
+def run(write_static=True, write_cache=False):
+    """Compute everything once and write JSON snapshots.
+
+    `write_static=True` writes /static/data/{key}.json files — the main mode
+    used by the GitHub Actions cron. These files are committed to the repo
+    and served directly by Vercel's CDN (zero DB cost).
+
+    `write_cache=True` also writes to the `cache` table — kept as an option
+    if you ever want to serve from a DB instead of static files.
+    """
     t0 = time.time()
-    print(f"[{time.strftime('%H:%M:%S')}] snapshot.run() — building cached blobs")
+    print(f"[{time.strftime('%H:%M:%S')}] snapshot.run()  static={write_static}  cache={write_cache}")
 
     # The one heavy read — load all transfers + balances into Python memory once
     from aggregate import per_address
@@ -365,26 +373,41 @@ def run():
     rows_dict = {r["address"]: r for r in rows_list}
     print(f"    {len(rows_list):,} addresses aggregated in {time.time()-t0:.1f}s")
 
-    print("  → build_behavior")
-    beh = build_behavior(rows_dict)
-    print("  → build_eligibility")
+    print("  → build_behavior / eligibility / timeline / summary")
+    beh  = build_behavior(rows_dict)
     elig = build_eligibility()
-    print("  → build_timeline")
-    tl = build_timeline()
-    print("  → build_summary")
-    sm = build_summary(rows_dict, beh)
-
-    # Write to cache
-    now = int(time.time())
-    cache_set("snapshot:behavior",    json.dumps(beh),  now)
-    cache_set("snapshot:eligibility", json.dumps(elig), now)
-    cache_set("snapshot:timeline",    json.dumps(tl),   now)
-    cache_set("snapshot:summary",     json.dumps(sm),   now)
-    cache_set("snapshot:meta",        json.dumps({
-        "built_at": now,
+    tl   = build_timeline()
+    sm   = build_summary(rows_dict, beh)
+    meta = {
+        "built_at":  int(time.time()),
         "transfers": transfer_count(),
         "addresses": len(rows_list),
-    }), now)
+    }
+
+    blobs = {
+        "behavior":    beh,
+        "summary":     sm,
+        "eligibility": elig,
+        "timeline":    tl,
+        "meta":        meta,
+    }
+
+    if write_static:
+        import os
+        out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "data")
+        os.makedirs(out_dir, exist_ok=True)
+        for name, value in blobs.items():
+            path = os.path.join(out_dir, f"{name}.json")
+            with open(path, "w") as f:
+                json.dump(value, f, separators=(",", ":"))  # minified
+            sz = os.path.getsize(path)
+            print(f"    wrote {path}  ({sz:,} bytes)")
+
+    if write_cache:
+        now = meta["built_at"]
+        for name, value in blobs.items():
+            cache_set(f"snapshot:{name}", json.dumps(value), now)
+        print("    also wrote to cache table")
 
     print(f"[{time.strftime('%H:%M:%S')}] snapshot complete in {time.time()-t0:.1f}s")
     return {"ok": True, "elapsed": round(time.time()-t0, 1), "addresses": len(rows_list)}

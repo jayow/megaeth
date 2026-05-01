@@ -400,11 +400,14 @@ function renderTimeline(series) {
 // Load + render
 let _data = null;
 async function load() {
+  // Static JSON snapshots (regenerated hourly by GitHub Actions cron,
+  // served from Vercel's CDN — no DB, no function invocation).
+  const bust = Math.floor(Date.now() / 60000);  // minute-level cache key
   const [sum, beh, elig, tl] = await Promise.all([
-    fetch('/api/summary').then(r=>r.json()),
-    fetch('/api/behavior?limit=20000').then(r=>r.json()),
-    fetch('/api/eligibility').then(r=>r.json()),
-    fetch('/api/timeline').then(r=>r.json()),
+    fetch(`/static/data/summary.json?v=${bust}`).then(r=>r.json()),
+    fetch(`/static/data/behavior.json?v=${bust}`).then(r=>r.json()),
+    fetch(`/static/data/eligibility.json?v=${bust}`).then(r=>r.json()),
+    fetch(`/static/data/timeline.json?v=${bust}`).then(r=>r.json()),
   ]);
   _data = { sum, beh, elig, tl };
   render();

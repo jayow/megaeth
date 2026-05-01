@@ -4,10 +4,8 @@
     { "source": "/static/(.*)", "destination": "/static/$1" },
     { "source": "/(.*)",        "destination": "/api/index" }
   ],
-  "crons": [
-    { "path": "/api/cron/sync", "schedule": "0 * * * *" }
-  ],
   "functions": {
-    "api/index.py": { "maxDuration": 60 }
+    "api/index.py": { "maxDuration": 30 }
   }
 }
+
