@@ -36,9 +36,20 @@ def get_rows(force=False):
     return _CACHE["rows"]
 
 
+@app.route("/tge")
+def tge():
+    """The MEGA TGE holder analytics dashboard. Canonical URL."""
+    return render_template("index.html")
+
+
 @app.route("/")
 def index():
-    return render_template("index.html")
+    """Redirect to canonical /tge so old bookmarks keep working.
+
+    The root is reserved for future Hanyon Analytics products.
+    """
+    from flask import redirect
+    return redirect("/tge", code=302)
 
 
 # ─── Cached endpoint handlers (read precomputed snapshot from DB) ───
