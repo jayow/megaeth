@@ -83,6 +83,21 @@ jobs:
       - name: Build snapshot
         run: python snapshot.py
 
+      # Sync canonical KPI program from MegaStaking proxy on MegaETH.
+      # Writes static/data/onchain_kpis.json — this is the source of truth for
+      # KPI thresholds, tranche rewards, and Foundation attestations.
+      - name: Sync on-chain KPIs
+        run: python sync_onchain_kpis.py
+        continue-on-error: true
+
+      # Build the KPI tracker (writes static/data/kpis.json) by joining the
+      # on-chain canonical data with live measurements (CoinGecko, Dune, RPC, L2Beat).
+      - name: Build KPIs
+        env:
+          DUNE_API_KEY: ${{ secrets.DUNE_API_KEY }}
+        run: python kpis.py
+        continue-on-error: true   # KPI failure shouldn't block snapshot push
+
       # Commit + push if anything changed
       - name: Commit snapshots
         run: |

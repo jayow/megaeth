@@ -316,6 +316,128 @@ def build_eligibility():
     }
 
 
+STAKING_ADDR = "0x42bfaaa203b8259270a1b5ef4576db6b8359daa1"
+MEGA_ADDR    = "0x28B7E77f82B25B95953825F1E3eA0E36c1c29861"
+
+def build_staking():
+    """Staking-specific aggregate: counts, hourly activity, top stakers."""
+    conn = connect()
+
+    # All transfers in/out of the staking contract
+    in_rows = list(conn.execute(
+        "SELECT timestamp, from_addr, value FROM transfers WHERE to_addr = ?",
+        (STAKING_ADDR,),
+    ))
+    out_rows = list(conn.execute(
+        "SELECT timestamp, to_addr, value FROM transfers WHERE from_addr = ?",
+        (STAKING_ADDR,),
+    ))
+
+    # Per-staker totals
+    by_addr = {}  # addr -> {staked, unstaked, last_ts_in, last_ts_out, n_in, n_out}
+    for r in in_rows:
+        a = r["from_addr"]
+        v = int(r["value"])
+        s = by_addr.setdefault(a, {"staked":0, "unstaked":0, "n_in":0, "n_out":0, "last_in":None, "last_out":None})
+        s["staked"] += v; s["n_in"] += 1
+        if not s["last_in"] or r["timestamp"] > s["last_in"]:
+            s["last_in"] = r["timestamp"]
+    for r in out_rows:
+        a = r["to_addr"]
+        v = int(r["value"])
+        s = by_addr.setdefault(a, {"staked":0, "unstaked":0, "n_in":0, "n_out":0, "last_in":None, "last_out":None})
+        s["unstaked"] += v; s["n_out"] += 1
+        if not s["last_out"] or r["timestamp"] > s["last_out"]:
+            s["last_out"] = r["timestamp"]
+
+    # Hourly activity buckets
+    hourly = {}
+    for r in in_rows:
+        ts = r["timestamp"]
+        if not ts: continue
+        h = ts[:13]
+        b = hourly.setdefault(h, {"n_stake":0, "n_unstake":0, "mega_stake":0, "mega_unstake":0})
+        b["n_stake"] += 1
+        b["mega_stake"] += int(r["value"])
+    for r in out_rows:
+        ts = r["timestamp"]
+        if not ts: continue
+        h = ts[:13]
+        b = hourly.setdefault(h, {"n_stake":0, "n_unstake":0, "mega_stake":0, "mega_unstake":0})
+        b["n_unstake"] += 1
+        b["mega_unstake"] += int(r["value"])
+
+    series = []
+    cumulative_n = 0
+    cumulative_mega = 0.0
+    for h in sorted(hourly):
+        b = hourly[h]
+        net_n   = b["n_stake"] - b["n_unstake"]
+        net_mga = (b["mega_stake"] - b["mega_unstake"]) / 10**18
+        cumulative_n    += net_n
+        cumulative_mega += net_mga
+        series.append({
+            "hour":           h,
+            "n_stake":        b["n_stake"],
+            "n_unstake":      b["n_unstake"],
+            "stake_mega":     round(b["mega_stake"]   / 10**18, 2),
+            "unstake_mega":   round(b["mega_unstake"] / 10**18, 2),
+            "net_n":          net_n,            # positive = net inflow
+            "net_mega":       round(net_mga, 2),
+            "cumul_n":        cumulative_n,     # running net stakers (events)
+            "cumul_mega":     round(cumulative_mega, 2),
+        })
+
+    # Top stakers (by net staked)
+    addrs = []
+    for a, s in by_addr.items():
+        net = s["staked"] - s["unstaked"]
+        addrs.append({
+            "address": a,
+            "staked":      _to_mega(s["staked"]),
+            "unstaked":    _to_mega(s["unstaked"]),
+            "net_staked":  _to_mega(max(0, net)),
+            "n_stake_tx":  s["n_in"],
+            "n_unstake_tx":s["n_out"],
+            "last_action": (s["last_in"] or "") if (s["last_in"] or "") > (s["last_out"] or "") else (s["last_out"] or ""),
+        })
+    addrs.sort(key=lambda x: -float(x["net_staked"]))
+
+    # Totals
+    total_in = sum(int(r["value"]) for r in in_rows)
+    total_out = sum(int(r["value"]) for r in out_rows)
+    active_now = sum(1 for s in by_addr.values() if s["staked"] - s["unstaked"] > 0)
+
+    # Current contract balance — fetch live from chain to avoid stale
+    # true_balance entries (the cached value was off by 60x at one point).
+    try:
+        import requests
+        addr_padded = STAKING_ADDR.lower().replace("0x", "").rjust(64, "0")
+        r = requests.post("https://mainnet.megaeth.com/rpc",
+            json={"jsonrpc": "2.0", "id": 1, "method": "eth_call",
+                  "params": [{"to": MEGA_ADDR, "data": "0x70a08231" + addr_padded}, "latest"]},
+            timeout=15)
+        current_locked = int(r.json()["result"], 16)
+    except Exception:
+        # Fallback to cached if RPC fails (better than nothing)
+        tb = conn.execute("SELECT balance FROM true_balance WHERE address = ?", (STAKING_ADDR,)).fetchone()
+        current_locked = int(tb["balance"]) if tb else 0
+
+    return {
+        "totals": {
+            "lifetime_stakers":  len(by_addr),
+            "active_stakers":    active_now,
+            "lifetime_staked":   _to_mega(total_in),
+            "lifetime_unstaked": _to_mega(total_out),
+            "currently_locked":  _to_mega(current_locked),
+            "stake_events":      len(in_rows),
+            "unstake_events":    len(out_rows),
+        },
+        "hourly":      series,
+        "top_stakers": addrs,  # full list — frontend paginates
+    }
+
+
 def build_timeline():
     conn = connect()
     batchers = [b.lower() for b in json.loads(get_state("batch_senders") or "[]")]
@@ -381,11 +503,12 @@ def run(write_static=True, write_cache=False):
     rows_dict = {r["address"]: r for r in rows_list}
     print(f"    {len(rows_list):,} addresses aggregated in {time.time()-t0:.1f}s")
 
-    print("  → build_behavior / eligibility / timeline / summary")
+    print("  → build_behavior / eligibility / timeline / summary / staking")
     beh  = build_behavior(rows_dict)
     elig = build_eligibility()
     tl   = build_timeline()
     sm   = build_summary(rows_dict, beh)
+    stk  = build_staking()
     meta = {
         "built_at":  int(time.time()),
         "transfers": transfer_count(),
@@ -397,6 +520,7 @@ def run(write_static=True, write_cache=False):
         "summary":     sm,
         "eligibility": elig,
         "timeline":    tl,
+        "staking":     stk,
         "meta":        meta,
     }
 

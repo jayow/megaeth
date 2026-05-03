@@ -1,0 +1,614 @@
+{
+  "synced_at": 1777765350,
+  "source_contract": "0x42bfaaa203b8259270a1b5ef4576db6b8359daa1",
+  "kpis": [
+    {
+      "id": 0,
+      "name": "Native App Mcap",
+      "description": "This KPI incentivizes growth in native app market capitalization, reflecting real ecosystem adoption and builder traction on MegaETH.",
+      "category": "Ecosystem Growth",
+      "source_url": "https://www.coingecko.com/en/categories/megaeth-ecosystem"
+    },
+    {
+      "id": 1,
+      "name": "Adoption - Block Gas Used",
+      "description": "Tracks block gas used to capture real demand for MegaETH blockspace\u2014higher, sustained gas usage usually means more users, more transactions, and more apps actually running on-chain.",
+      "category": "Ecosystem Growth",
+      "source_url": "https://dune.com/megaeth/megaeth-block-gas"
+    },
+    {
+      "id": 2,
+      "name": "ETH exported to Mega",
+      "description": "Measures how much ETH is bridged into MegaETH, signaling user trust, capital commitment, and real migration of value into the ecosystem.",
+      "category": "Ecosystem Growth",
+      "source_url": "https://dune.com/megaeth/megaeth-eth-bridging"
+    },
+    {
+      "id": 3,
+      "name": "USDM Adoption",
+      "description": "Measures the Total Value Locked (TVL) within the USDm minting contract. This represents the Economic Fuel of the network as USDM generates revenue for token buyback.",
+      "category": "Ecosystem Growth",
+      "source_url": "https://mega.etherscan.io/token/0xfafddbb3fc7688494971a79cc65dca3ef82079e7#tokenInfo"
+    },
+    {
+      "id": 4,
+      "name": "Ethereum Uptime",
+      "description": "Tracks Ethereum uptime to ensure the base layer remains stable and reliable, reinforcing MegaETH's security assumptions and overall network resilience.",
+      "category": "Ethereum Decentralization",
+      "source_url": "https://dune.com/megaeth/ethereum-uptime"
+    },
+    {
+      "id": 5,
+      "name": "Hardforks -> Product improvements",
+      "description": "Tracks successful Ethereum hardforks as signals of ongoing protocol improvements, ensuring MegaETH benefits from upstream security, performance, and feature upgrades.",
+      "category": "Ethereum Decentralization",
+      "source_url": "https://ethereum.org/ethereum-forks"
+    },
+    {
+      "id": 6,
+      "name": "Data Availability",
+      "description": "Ensure all data required to generate fraud proofs is always verifiably available.",
+      "category": "MegaETH Decentralization",
+      "source_url": "https://l2beat.com/scaling/projects/megaeth#da-layer"
+    },
+    {
+      "id": 7,
+      "name": "State Validation",
+      "description": "Allow users to submit fraud proofs to challenge an invalid state.",
+      "category": "MegaETH Decentralization",
+      "source_url": "https://l2beat.com/scaling/projects/megaeth#state-validation"
+    },
+    {
+      "id": 8,
+      "name": "Proposer Failure",
+      "description": "Ensure liveness by allowing anyone (or a permissionless set of users) to propose state updates if the primary proposer fails.",
+      "category": "MegaETH Decentralization",
+      "source_url": "https://l2beat.com/scaling/projects/megaeth#summary"
+    },
+    {
+      "id": 9,
+      "name": "Exit Window",
+      "description": "Provide an escape hatch window so users can exit if an unwanted upgrade is proposed.",
+      "category": "MegaETH Decentralization",
+      "source_url": "https://l2beat.com/scaling/projects/megaeth#state-validation"
+    },
+    {
+      "id": 10,
+      "name": "Block Times",
+      "description": "Measures how reliably MegaETH produces miniblocks, capturing the real-time execution experience that differentiates MegaETH from other L2s.",
+      "category": "MegaETH Performance",
+      "source_url": "https://uptime.megaeth.com/"
+    },
+    {
+      "id": 11,
+      "name": "Finality",
+      "description": "Time between a MegaETH block being produced to the batch containing the said block being finalized on L1. Does not include the fraud proof challenge period.",
+      "category": "MegaETH Performance",
+      "source_url": "https://dune.com/megaeth/megaeth-finality"
+    },
+    {
+      "id": 12,
+      "name": "Uptime",
+      "description": "Tracks continuous block production on MegaETH, ensuring the chain remains live without extended outages.",
+      "category": "MegaETH Performance",
+      "source_url": "https://dune.com/megaeth/megaeth-monitor"
+    }
+  ],
+  "tranches": [
+    {
+      "id": 0,
+      "kpi_id": 0,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 1 MegaETH-native app with market cap \u2265 $20M",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 1,
+      "kpi_id": 0,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 1 MegaETH-native app with market cap \u2265 $50M",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 2,
+      "kpi_id": 0,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 2 MegaETH-native apps with market cap \u2265 $50M",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 3,
+      "kpi_id": 0,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 1 MegaETH-native app with market cap \u2265 $100M",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 4,
+      "kpi_id": 0,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 2 MegaETH-native apps with market cap \u2265 $100M",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 5,
+      "kpi_id": 0,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 3 MegaETH-native apps with market cap \u2265 $100M",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 6,
+      "kpi_id": 1,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "25.92 TGas in a month (average 10MGas per second)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 7,
+      "kpi_id": 1,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "51.84 TGas in a month (average 20MGas per second)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 8,
+      "kpi_id": 1,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "103.68 TGas in a month (average 40MGas per second)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 9,
+      "kpi_id": 2,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 50,000 ETH bridged to MegaETH",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 10,
+      "kpi_id": 2,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 100,000 ETH bridged to MegaETH",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 11,
+      "kpi_id": 2,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 150,000 ETH bridged to MegaETH",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 12,
+      "kpi_id": 2,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u2265 200,000 ETH bridged to MegaETH",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 13,
+      "kpi_id": 3,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "USDM circulating supply \u2265 $500M (excluding treasury & escrow)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 14,
+      "kpi_id": 3,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "USDM circulating supply \u2265 $800M (excluding treasury & escrow)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 15,
+      "kpi_id": 3,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "USDM circulating supply \u2265 $1.0B (excluding treasury & escrow)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 16,
+      "kpi_id": 3,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "USDM circulating supply \u2265 $1.2B (excluding treasury & escrow)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 17,
+      "kpi_id": 3,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "USDM circulating supply \u2265 $1.5B (excluding treasury & escrow)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 18,
+      "kpi_id": 4,
+      "reward_mega": 25000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Ethereum uptime > 11 years",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 19,
+      "kpi_id": 4,
+      "reward_mega": 25000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Ethereum uptime > 12 years",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 20,
+      "kpi_id": 4,
+      "reward_mega": 25000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Ethereum uptime > 13 years",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 21,
+      "kpi_id": 5,
+      "reward_mega": 25000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Glamsterdam hardfork completed",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 22,
+      "kpi_id": 5,
+      "reward_mega": 25000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Hegota hardfork completed",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 23,
+      "kpi_id": 6,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Implement DA bridge with DA Cert Verifier (EigenDA V2)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 24,
+      "kpi_id": 7,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Permissioned fraud proof system with \u2265 5 independent external actors",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 25,
+      "kpi_id": 7,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Fully functional and permissionless fraud proof system",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 26,
+      "kpi_id": 8,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Security council can rotate proposer if primary fails",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 27,
+      "kpi_id": 8,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "Anyone can propose state roots (permissionless)",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 28,
+      "kpi_id": 9,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u22657d time delay before protocol upgrade goes into effect",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 29,
+      "kpi_id": 9,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "\u226530d time delay before protocol upgrade goes into effect",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 30,
+      "kpi_id": 10,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "90% of miniblocks at or below 12ms blocktime for 30 days",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 31,
+      "kpi_id": 10,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "95% of miniblocks at or below 12ms blocktime for 3 months",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 32,
+      "kpi_id": 10,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "98% of miniblocks at or below 12ms blocktime for 3 months",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 33,
+      "kpi_id": 11,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "90% of batches finalized within 120 minutes in last 30 days",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 34,
+      "kpi_id": 11,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "95% of batches finalized within 90 minutes in last 30 days",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 35,
+      "kpi_id": 11,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "98% of batches finalized within 90 minutes in last 30 days",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 36,
+      "kpi_id": 12,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "No >5-minute block production pause (except scheduled maintenance) in past 1 month",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 37,
+      "kpi_id": 12,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "No >5-minute block production pause (except scheduled maintenance) in past 3 months",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    },
+    {
+      "id": 38,
+      "kpi_id": 12,
+      "reward_mega": 50000000.0,
+      "beneficiary": "0x28b7e77f82b25b95953825f1e3ea0e36c1c29861",
+      "label": "No >5-minute block production pause (except scheduled maintenance) in past 6 months",
+      "extra": {
+        "f3": 0,
+        "f4_status_at_create": 1
+      },
+      "onchain_status": null,
+      "achievement_value": null
+    }
+  ],
+  "totals": {
+    "kpi_count": 13,
+    "tranche_count": 39,
+    "total_reward_mega_allocated": 1825000000.0,
+    "total_pool_mega": 5330000000,
+    "unallocated_mega": 3505000000.0,
+    "tranches_attested_onchain": 0
+  }
+}

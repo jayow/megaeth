@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MEGA · KPI Tracker · Hanyon</title>
+<style>
+  @font-face { font-family:'WudooMono'; src:url('/static/fonts/e2542b709b225903-s.p.otf') format('opentype'); font-display:swap; }
+
+  :root {
+    --black:#1a1a1b; --panel:#19191a; --panel-2:#232325;
+    --white:#dfd9d9; --white-60:#ece8e8; --white-40:hsla(0,9%,86%,.4); --white-20:hsla(0,9%,86%,.2);
+    --text2:#7e7e7e; --text3:#9b9595; --text5:#cbc5c5;
+    --line:rgba(203,197,197,.13); --line-2:rgba(203,197,197,.22);
+    --theme:#aef54c;
+    --held:var(--white); --sold:#b8a4a4; --bought:#7a7a8a; --pending:#4a4a4a;
+  }
+  * { box-sizing:border-box; border-color:var(--line); }
+  html, body { margin:0; background:var(--black); color:var(--white); }
+  body { font:14px/1.5 'WudooMono', ui-monospace, Menlo, monospace; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; text-decoration:none; }
+  ::selection { background:var(--white); color:var(--black); }
+  .wrap { max-width:1286px; margin:0 auto; padding:32px 32px 80px; }
+
+  /* Header */
+  .head { display:flex; justify-content:space-between; align-items:center; padding-bottom:14px; margin-bottom:32px; border-bottom:1px solid var(--line); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; }
+  .head .brand { display:flex; align-items:center; gap:14px; color:var(--white); }
+  .head .meta { display:flex; gap:22px; align-items:center; color:var(--text3); }
+  .head .meta a { color:var(--text3); transition:color .15s; }
+  .head .meta a:hover { color:var(--theme); }
+  .head .meta .live { color:var(--white); }
+
+  /* Headline tiles */
+  .top { display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:14px; margin-bottom:48px; }
+  @media (max-width:760px) { .top { grid-template-columns:1fr 1fr; } }
+  .tile { background:var(--panel); border:1px solid var(--line); padding:24px 26px;
+    clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+  .tile .lbl { font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text3); }
+  .tile .val { font-size:28px; font-weight:500; letter-spacing:-0.01em; margin-top:8px; }
+  .tile .val .small { font-size:12px; color:var(--text3); margin-left:4px; font-weight:400; }
+  .tile .sub { font-size:11px; color:var(--text3); margin-top:6px; }
+  .tile.lead .val { font-size:34px; color:var(--theme); }
+
+  /* Section heads */
+  section { margin-top:56px; }
+  .h-row { margin-bottom:18px; display:flex; justify-content:space-between; align-items:baseline; gap:24px; }
+  .h-row h2 { margin:0; font-size:13px; font-weight:500; text-transform:uppercase; letter-spacing:0.12em; color:var(--white); }
+  .h-row .desc { color:var(--text3); font-size:12px; max-width:560px; }
+  .bracket { color:var(--text3); margin-right:8px; }
+
+  /* KPI cards */
+  .kpi { background:var(--panel); border:1px solid var(--line); padding:24px 26px; margin-bottom:14px;
+    clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+  .kpi .head-row { display:flex; justify-content:space-between; align-items:baseline; gap:14px; margin-bottom:18px; }
+  .kpi .name { display:flex; align-items:baseline; gap:10px; }
+  .kpi .name .id { color:var(--text3); font-size:11px; }
+  .kpi .name .title { color:var(--white); font-size:16px; font-weight:500; }
+  .kpi .name .cat { color:var(--text3); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; }
+  .kpi .now { text-align:right; }
+  .kpi .now .v { font-size:24px; font-weight:500; color:var(--white); font-feature-settings:'tnum'; }
+  .kpi .now .v.met { color:var(--theme); }
+  .kpi .now .lbl { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
+  .tranches { display:grid; gap:8px; }
+  .tr { display:grid; grid-template-columns:160px 1fr 90px 100px; gap:14px; align-items:center; padding:8px 0; border-top:1px solid var(--line); }
+  .tr:first-child { border-top:0; }
+  .tr .l { font-size:13px; color:var(--white); }
+  .tr .l .gap { font-size:11px; color:var(--text3); display:block; margin-top:2px; }
+  .tr .bar { height:8px; background:var(--panel-2); border:1px solid var(--line); position:relative; }
+  .tr .bar > div { height:100%; transition:width .3s ease; }
+  .tr .pct { font-size:13px; font-variant-numeric:tabular-nums; color:var(--white); text-align:right; }
+  .tr .reward { font-size:12px; color:var(--text3); text-align:right; font-feature-settings:'tnum'; }
+  .tr.met .l { color:var(--theme); }
+  .tr.met .pct { color:var(--theme); }
+
+  /* Staking section */
+  .stake-tiles { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:24px; }
+  @media (max-width:760px) { .stake-tiles { grid-template-columns:repeat(2, 1fr); } }
+  .stake-card { background:var(--panel); border:1px solid var(--line); padding:24px;
+    clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+
+  /* Hourly chart */
+  .timecard { background:var(--panel); border:1px solid var(--line); padding:22px;
+    clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    position:relative; }
+  .timecard svg { display:block; width:100%; height:220px; }
+  .timecard .axis { font:10px 'WudooMono',monospace; fill:var(--text3); }
+  .timecard .grid { stroke:var(--line); stroke-width:1; }
+  .stk-legend { display:flex; gap:22px; margin-top:14px; font-size:11px; color:var(--text3); }
+  .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .ctl { display:inline-flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--line); padding:7px 14px; }
+  .ctl label { font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text3); }
+  .ctl select, .ctl input { background:transparent; color:var(--white); border:0; outline:none; font:12px 'WudooMono',monospace; min-width:110px; }
+  .ctl input.search { min-width:300px; }
+  .ctl select { -webkit-appearance:none; appearance:none; padding-right:14px; }
+  .ctl-spacer { flex:1; }
+  .ctl-hint { color:var(--text3); font-size:11px; }
+
+  /* Tooltip */
+  .tooltip { position:absolute; pointer-events:none; opacity:0; transition:opacity .1s; background:var(--panel-2); border:1px solid var(--line-2); padding:10px 14px; min-width:200px; font-size:11px; z-index:10;
+    clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+  .tooltip .when { color:var(--text3); text-transform:uppercase; letter-spacing:0.08em; font-size:10px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .tooltip .row { display:flex; justify-content:space-between; gap:14px; padding:2px 0; }
+  .tooltip .row .l { color:var(--text5); display:flex; align-items:center; gap:7px; }
+  .tooltip .row .v { color:var(--white); font-weight:500; }
+  .tooltip .sw { width:8px; height:8px; }
+  .hover-rect { fill:transparent; cursor:crosshair; }
+  .hover-line { stroke:var(--white-40); stroke-width:1; stroke-dasharray:2,3; pointer-events:none; }
+
+  /* Staker table */
+  .tablewrap { background:var(--panel); border:1px solid var(--line); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th, td { padding:11px 16px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; font-feature-settings:'tnum'; }
+  thead th { font-size:10px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:0.08em; background:var(--panel); position:sticky; top:0; cursor:pointer; user-select:none; }
+  th.sortable:hover { color:var(--white); }
+  th.sorted { color:var(--white); }
+  th.sorted::after { content:" ↓"; }
+  th.sorted.asc::after { content:" ↑"; }
+  tr:last-child td { border-bottom:0; }
+  td.l, th.l { text-align:left; }
+  td.dim { color:var(--text3); }
+  td a.addr { color:var(--white); border-bottom:1px solid var(--line-2); padding-bottom:1px; transition:color .15s, border-color .15s; }
+  td a.addr:hover { color:var(--theme); border-color:var(--theme); }
+  .pager { display:flex; gap:14px; align-items:center; justify-content:flex-end; padding:18px 0 0; color:var(--text3); font-size:12px; }
+  .pager button { background:transparent; color:var(--white); border:1px solid var(--line-2); padding:6px 14px; font:500 11px 'WudooMono',monospace; text-transform:uppercase; letter-spacing:0.06em; cursor:pointer; }
+  .pager button:hover:not(:disabled) { border-color:var(--theme); color:var(--theme); }
+  .pager button:disabled { opacity:.3; cursor:default; }
+  .pager .info { font-feature-settings:'tnum'; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="head">
+  <div class="brand">
+    <a href="https://www.megaeth.com/" target="_blank">
+      <img src="/static/img/megaeth-light.svg" alt="MegaETH" style="height:18px;display:block">
+    </a>
+    <span style="border-left:1px solid var(--line-2); padding-left:14px; color:var(--text3)">KPI TRACKER</span>
+  </div>
+  <div class="meta">
+    <a href="/tge">← TGE Dashboard</a>
+    <span>BY <a href="https://hanyon.app" target="_blank" style="color:var(--white);border-bottom:1px solid var(--line-2);padding-bottom:1px"><b>HANYON ANALYTICS</b></a></span>
+    <span class="live" id="mSync">● LIVE</span>
+  </div>
+</div>
+
+<!-- TOP TILES -->
+<div class="top" id="topTiles"></div>
+
+<!-- KPI LIST -->
+<section style="margin-top:0">
+  <div class="h-row">
+    <h2><span class="bracket">[◻]</span>KPI TRANCHES</h2>
+  </div>
+  <div id="kpiList"></div>
+</section>
+
+<!-- STAKING -->
+<section>
+  <div class="h-row">
+    <h2><span class="bracket">[◻]</span>MEGASTAKING</h2>
+  </div>
+  <div class="stake-tiles" id="stakeTiles"></div>
+  <div class="timecard" style="margin-top:14px">
+    <svg id="stakeChart" viewBox="0 0 1200 260" preserveAspectRatio="none" style="height:260px"></svg>
+    <div class="tooltip" id="stakeTooltip"></div>
+    <div class="stk-legend">
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--theme);margin-right:6px"></span>Stake-in (above zero)</div>
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--sold);margin-right:6px"></span>Stake-out (below zero)</div>
+      <div><span style="display:inline-block;width:14px;height:0;border-top:2px dashed var(--theme);margin-right:6px;vertical-align:middle"></span>Cumulative net (right axis)</div>
+    </div>
+  </div>
+</section>
+
+<!-- STAKER TABLE -->
+<section>
+  <div class="h-row">
+    <h2><span class="bracket">[◻]</span>STAKERS</h2>
+    <div class="desc">All addresses ever staked, ranked by net staked MEGA.</div>
+  </div>
+  <div class="controls">
+    <div class="ctl">
+      <label>Search</label>
+      <input id="stakerSearch" class="search" type="text" placeholder="0x… (substring)">
+    </div>
+    <div class="ctl-spacer"></div>
+    <span class="ctl-hint" id="stakerHint"></span>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead id="stakerHead"></thead>
+      <tbody id="stakerRows"></tbody>
+    </table>
+  </div>
+  <div class="pager" id="stakerPager"></div>
+</section>
+
+</div>
+
+<script>
+const fmt = n => {
+  const x = Number(n);
+  if (!isFinite(x)) return n;
+  if (x === 0) return '0';
+  if (Math.abs(x) >= 1e9) return (x/1e9).toLocaleString(undefined,{maximumFractionDigits:2}) + 'B';
+  if (Math.abs(x) >= 1e6) return (x/1e6).toLocaleString(undefined,{maximumFractionDigits:2}) + 'M';
+  if (Math.abs(x) >= 1e3) return (x/1e3).toLocaleString(undefined,{maximumFractionDigits:2}) + 'K';
+  if (x >= 1) return x.toLocaleString(undefined,{maximumFractionDigits:2});
+  return x.toLocaleString(undefined,{maximumFractionDigits:6});
+};
+const fmtInt = n => Number(n).toLocaleString();
+const short = a => a.slice(0,8) + '…' + a.slice(-6);
+const expAddr = a => `https://megaeth.blockscout.com/address/${a}`;
+
+const bust = Math.floor(Date.now() / 60000);
+let _data = null;
+
+async function load() {
+  const [kpis, staking, meta] = await Promise.all([
+    fetch(`/static/data/kpis.json?v=${bust}`).then(r=>r.json()),
+    fetch(`/static/data/staking.json?v=${bust}`).then(r=>r.json()),
+    fetch(`/static/data/meta.json?v=${bust}`).then(r=>r.json()),
+  ]);
+  _data = { kpis, staking, meta };
+  render();
+}
+
+function fmtKPI(v, unit) {
+  if (v == null) return '—';
+  if (unit === '$')      return '$' + fmt(v);
+  if (unit === 'ETH')    return fmt(v) + ' ETH';
+  if (unit === 'MGas/s') return fmt(v) + ' MGas/s';
+  if (unit === 'TGas')   return (typeof v === 'number' ? v.toFixed(2) : v) + ' TGas';
+  if (unit === 'ms')     return fmt(v) + ' ms';
+  if (unit === '%')      return (typeof v === 'number' ? v.toFixed(2) : v) + '%';
+  if (unit === 'years')  return v.toFixed(2) + ' yrs';
+  return String(v);
+}
+
+function render() {
+  const { kpis, staking, meta } = _data;
+  const lm  = kpis.live_measurements || {};
+
+  // ─── Top tiles ───
+  const ut  = (kpis.unlocked_mega || 0) / 1e6;
+  const lk  = (kpis.locked_mega   || 0) / 1e6;
+  document.getElementById('topTiles').innerHTML = `
+    <div class="tile lead">
+      <div class="lbl">Tranches Met (forecast vs on-chain)</div>
+      <div class="val">${kpis.completed_tranches}<span class="small">/ ${kpis.total_tranches}</span></div>
+      <div class="sub">${fmt(ut)}M unlocked · ${fmt(lk)}M locked · ${(kpis.onchain.total_reward_mega_allocated/1e6).toFixed(0)}M allocated on-chain</div>
+    </div>
+    <div class="tile">
+      <div class="lbl">MEGA Staked</div>
+      <div class="val">${fmt(parseFloat(staking.totals.currently_locked))}<span class="small">MEGA</span></div>
+      <div class="sub">${fmtInt(staking.totals.active_stakers)} active stakers · ${fmt(parseFloat(staking.totals.lifetime_staked))} MEGA lifetime</div>
+    </div>
+  `;
+
+  // ─── KPI list grouped by category ───
+  const order = ['Ecosystem Growth', 'MegaETH Performance', 'MegaETH Decentralization', 'Ethereum Decentralization'];
+  const byCat = {};
+  for (const k of kpis.kpis) {
+    if (!byCat[k.category]) byCat[k.category] = [];
+    byCat[k.category].push(k);
+  }
+  const html = order.filter(c => byCat[c]).map(cat => {
+    const cards = byCat[cat].map(k => {
+      const trs = k.tranches.map(t => {
+        const isManual = (t.kind || '').startsWith('manual') || t.kind === 'no_live_data' || t.kind === 'unparsable';
+        const isInProgress = t.kind === 'tge_window_in_progress';
+        const met = t.status === 'completed';
+        const pct = Math.min(100, t.percent || 0);
+        const reward = `${(t.reward_mega/1e6).toFixed(0)}M MEGA`;
+        const cls = met ? 'met' : (isManual ? 'manual' : '');
+        const pctTxt = isManual ? '—' : (pct.toFixed(0) + '%');
+        const barColor = met ? 'var(--theme)' : (isManual ? 'var(--text3)' : (isInProgress ? 'var(--text2)' : 'var(--white)'));
+        const attestBadge = t.onchain_attested
+          ? `<span style="background:var(--theme);color:var(--black);font-size:9px;padding:1px 5px;border-radius:2px;margin-left:6px;letter-spacing:0.04em">ATTESTED</span>`
+          : '';
+        return `<div class="tr ${cls}">
+          <div class="l">${t.label}${attestBadge}</div>
+          <div class="bar"><div style="background:${barColor};width:${isManual?0:pct}%"></div></div>
+          <div class="pct">${pctTxt}</div>
+          <div class="reward">${reward}</div>
+        </div>`;
+      }).join('');
+
+      // Per-KPI caveat — pulled from richer live measurements where available
+      let caveat = '';
+      if (k.id === 0 && lm.native_apps) {
+        const tops = (lm.native_apps.apps || []).length
+          ? lm.native_apps.apps.slice(0, 5).map(a => `${a.symbol.toUpperCase()} ($${fmt(a.mcap_usd)})`).join(' · ')
+          : 'none yet';
+        const skipped = (lm.native_apps.non_native_skipped || []).map(a => `${a.symbol.toUpperCase()} ($${fmt(a.mcap_usd)}, on ${a.platform || 'unknown'})`).join(' · ');
+        const skipNote = skipped ? ` Excluded (canonical chain elsewhere): ${skipped}.` : '';
+        caveat = `Native = CoinGecko asset_platform_id == mega-eth. Top 5 native by mcap: ${tops}.${skipNote}`;
+      }
+      if (k.id === 1 && lm.gas) {
+        const g = lm.gas;
+        if (g.series && g.latest_completed) {
+          const recent = g.series.slice(-4).map(m => `${m.month.slice(0,7)}: ${m.tgas} TGas`).join(' · ');
+          caveat = `Source: Dune query 6816766. Latest complete month: <strong style="color:var(--white)">${g.latest_completed.month.slice(0,7)} = ${g.latest_completed.tgas} TGas</strong>. Current month so far: ${g.latest_month.month.slice(0,7)} = ${g.latest_month.tgas} TGas. Recent: ${recent}.`;
+        }
+      }
+      if (k.id === 2 && lm.bridged) {
+        const b = lm.bridged;
+        const recent = (b.series || []).slice(-5).map(d => `${d.day}: +${d.inflow.toFixed(2)} / −${d.outflow.toFixed(2)}`).join(' · ');
+        caveat = `Source: Dune dashboard megaeth-eth-bridging. Inflow: <strong style="color:var(--white)">${b.total_inflow_eth.toFixed(2)} ETH</strong> · Outflow: ${b.total_outflow_eth.toFixed(2)} · Net: ${b.net_inflow_eth.toFixed(2)}. Recent days: ${recent}.`;
+      }
+      if (k.id === 3 && lm.usdm) {
+        const u = lm.usdm;
+        const strict = u.strict || {};
+        const econ   = u.economic || {};
+        caveat = `Spec: "circulating supply ≥ \$X (excluding treasury & escrow)". Two readings:<br>
+          • <strong style="color:var(--white)">Strict (literal spec, default)</strong>: \$${fmt(strict.circulating)} circulating. Excludes only protocol-governance Safes (currently \$${fmt(strict.excluded)} = $0 — none of the 3 governance Safes hold USDm). This matches what the Foundation will likely attest.<br>
+          • <strong style="color:var(--text2)">Economic (issuer-bootstrap excluded)</strong>: \$${fmt(econ.circulating)} circulating. Also excludes the \$500M Ethena minted to themselves and deposited in Aave (still 100% in their wallet as aUSDm receipts). Reflects real organic adoption.<br><br>
+          Total supply: \$${fmt(u.total)}.<br><br>
+          <strong>Context on the \$500M Aave seeding:</strong> USDm is an Ethena-issued stablecoin for MegaETH (uses xUSDOFTUpgradeable — the same OFT contract Ethena uses for USDtb/USDe). On-chain ties confirming Ethena issuance: (1) Ethena's EthenaMinting contract holds USDm on L1; (2) the seeding hopper holds \$140M aEthUSDtb on Ethereum (Ethena's tokenized treasuries); (3) sibling 0x2d4d… vanity wallets sent \$8.18M USDm to EthenaMinting on TGE day; (4) seeded amount is exactly \$2,916 above the \$500M threshold — engineered. Bootstrap liquidity is normal at launch; whether it counts as "circulating" depends on how strictly you read the spec.`;
+      }
+      if (k.id === 4 && lm.eth_block_times) {
+        const e = lm.eth_block_times;
+        caveat = `Years-since-genesis is the KPI signal (currently ${(lm.eth_uptime_years||0).toFixed(2)}y). Ethereum block-time health: avg ${(e.avg_seconds||0).toFixed(2)}s · p50 ${e.p50_seconds}s · p95 ${e.p95_seconds}s · p99 ${e.p99_seconds}s (Dune 6822056).`;
+      }
+      if (k.id === 10 && lm.block_times) {
+        const bt = lm.block_times;
+        caveat = `Spec source: uptime.megaeth.com (miniblock latency). Dune query 6822619 only exposes full-block cadence. Latest month avg full-block: <strong style="color:var(--white)">${bt.current_block_ms || 'n/a'}ms</strong>. Tranches stay manual until miniblock data is machine-readable.`;
+      }
+      if (k.id === 11) {
+        caveat = `Foundation's Dune finality dashboard visualizations are PRIVATE — public API returns "unauthorized." Manual until exposed.`;
+      }
+      if (k.id === 12 && lm.block_gaps) {
+        const u = lm.block_gaps;
+        const recent = (u.series || []).slice(-4).map(m => `${m.month.slice(0,7)}: ${m.gaps} gaps (${m.gap_seconds.toFixed(0)}s total)`).join(' · ');
+        const win = kpis.tge ? kpis.tge.window_30d : null;
+        const winNote = win ? `TGE-anchored, window TGE→TGE+Nmo. Currently ${win.elapsed_days.toFixed(2)}d post-TGE.` : '';
+        caveat = `${winNote} Source: Dune 6822636 (>5s gaps, monthly). Zero >5s gaps ⟹ zero >5min pauses by transitivity. Recent: ${recent}.`;
+      }
+      if (k.category === 'MegaETH Decentralization' && lm.l2beat) {
+        const sv = lm.l2beat;
+        caveat = `L2Beat snapshot — stateValidation: <strong style="color:var(--white)">${sv.stateValidation || 'n/a'}</strong> · exitWindow: <strong style="color:var(--white)">${sv.exitWindow || 'n/a'}</strong> · proposerFailure: <strong style="color:var(--white)">${sv.proposerFailure || 'n/a'}</strong> · DA: <strong style="color:var(--white)">${sv.dataAvailability || 'n/a'}</strong>`;
+      }
+      const caveatHtml = caveat
+        ? `<div style="font-size:11px;color:var(--text3);margin-top:14px;padding-top:14px;border-top:1px solid var(--line);line-height:1.55">⚠ ${caveat}</div>`
+        : '';
+
+      const sourceLink = k.source_url
+        ? `<a href="${k.source_url}" target="_blank" style="color:var(--text3);font-size:11px;border-bottom:1px solid var(--line-2);padding-bottom:1px;transition:color .15s,border-color .15s" onmouseover="this.style.color='var(--theme)';this.style.borderColor='var(--theme)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--line-2)'">${(new URL(k.source_url)).host} →</a>`
+        : '';
+
+      // Headline observed value: take the first tranche's observed (or null for manuals)
+      const firstObs = (k.tranches[0] && k.tranches[0].observed != null) ? k.tranches[0].observed : '—';
+      const obsLabel = (k.tranches[0] && k.tranches[0].kind) || '';
+
+      return `<div class="kpi">
+        <div class="head-row">
+          <div class="name">
+            <span class="id">#${k.id}</span>
+            <span class="title">${k.name}</span>
+          </div>
+          <div class="now">
+            <div class="v ${k.completed_tranches>0?'met':''}">${typeof firstObs === 'number' ? fmt(firstObs) : firstObs}</div>
+            <div class="lbl">${obsLabel.replace(/_/g, ' ')}</div>
+          </div>
+        </div>
+        <div class="tranches">${trs}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+          <span style="color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:0.06em">Source</span>
+          ${sourceLink}
+        </div>
+        ${caveatHtml}
+      </div>`;
+    }).join('');
+    return `<div style="margin-top:32px;margin-bottom:14px">
+      <div style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:0.12em">${cat}</div>
+    </div>${cards}`;
+  }).join('');
+  document.getElementById('kpiList').innerHTML = html;
+
+  // ─── Staking tiles ───
+  const t = staking.totals;
+  document.getElementById('stakeTiles').innerHTML = `
+    <div class="tile lead">
+      <div class="lbl">Currently staked</div>
+      <div class="val">${fmt(parseFloat(t.currently_locked))}<span class="small">MEGA</span></div>
+      <div class="sub">${fmtInt(t.active_stakers)} active stakers (of ${fmtInt(t.lifetime_stakers)} lifetime) · live balanceOf()</div>
+    </div>
+  `;
+
+  // ─── Hourly stake bar chart ───
+  renderStakeChart(staking.hourly);
+
+  // ─── Staker table ───
+  renderStakers();
+
+  // ─── Sync status ───
+  if (meta && meta.built_at) {
+    const ageMin = Math.round((Date.now()/1000 - meta.built_at) / 60);
+    document.getElementById('mSync').textContent = ageMin < 90
+      ? `● LIVE · updated ${ageMin}m ago`
+      : `● ${Math.round(ageMin/60)}h old`;
+  }
+}
+
+// ─── stake hourly bar chart — positive stake-in, NEGATIVE stake-out, cumulative line ───
+function renderStakeChart(series) {
+  const svg = document.getElementById('stakeChart');
+  const W = 1200, H = 260, padL = 60, padR = 60, padT = 14, padB = 32;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  // Filter on MEGA volume so hours with no value movement are dropped (was: event count).
+  const active = series.filter(s => (parseFloat(s.stake_mega) + parseFloat(s.unstake_mega)) > 0);
+  if (!active.length) { svg.innerHTML = ''; return; }
+
+  // Y-domain: positive = stake-in MEGA, negative = stake-out MEGA; centered on zero
+  const maxIn  = Math.max(0, ...active.map(s => parseFloat(s.stake_mega)));
+  const maxOut = Math.max(0, ...active.map(s => parseFloat(s.unstake_mega)));
+  const maxAbs = Math.max(maxIn, maxOut, 1);
+  const yZero  = padT + innerH / 2;
+  const halfH  = innerH / 2;
+  const yPos   = v => yZero - (v / maxAbs) * halfH;   // positive grows up
+  const yNeg   = v => yZero + (v / maxAbs) * halfH;   // positive grows down
+
+  // Cumulative net MEGA (right axis) — share zero with the bars so positive
+  // cumul grows UP from the middle and negative would grow DOWN. This avoids
+  // the visual confusion where a positive cumulative drew near the bottom.
+  const cumulVals = active.map(s => parseFloat(s.cumul_mega));
+  const cumMaxAbs = Math.max(Math.abs(Math.max(0, ...cumulVals)),
+                             Math.abs(Math.min(0, ...cumulVals)), 1);
+  const yCum = v => yZero - (v / cumMaxAbs) * halfH;
+
+  const groupW = innerW / active.length;
+  const barW = Math.max(2, groupW * 0.7);
+  const xLeft = i => padL + i * groupW + (groupW - barW) / 2;
+  const xMid  = i => xLeft(i) + barW/2;
+
+  // Grid lines + Y axis labels (left = MEGA volume per hour, right = cumulative MEGA)
+  const gridLeft = [-1, -0.5, 0, 0.5, 1].map(t => {
+    const yp = yZero - t * halfH;
+    const lbl = t === 0 ? '0' : (t > 0 ? '+' : '−') + fmt(Math.abs(t * maxAbs));
+    return `<line class="grid" x1="${padL}" y1="${yp}" x2="${W-padR}" y2="${yp}"/>` +
+           `<text class="axis" x="${padL-8}" y="${yp+3}" text-anchor="end">${lbl}</text>`;
+  }).join('');
+  // Right axis: same zero as bars (middle), symmetric ±cumMaxAbs
+  const gridRight = [-1, -0.5, 0, 0.5, 1].map(t => {
+    const yp = yZero - t * halfH;
+    const v  = t * cumMaxAbs;
+    const lbl = v === 0 ? '0' : (v > 0 ? '+' : '−') + fmt(Math.abs(v));
+    return `<text class="axis" x="${W-padR+6}" y="${yp+3}" text-anchor="start" fill="var(--theme)">${lbl}</text>`;
+  }).join('');
+  const ticks = [0, 0.33, 0.66, 1].map(t => {
+    const i = Math.round((active.length-1) * t);
+    const px = xMid(i);
+    const ts = active[i].hour.replace('T', ' ') + ':00';
+    return `<text class="axis" x="${px}" y="${H-12}" text-anchor="middle">${ts.slice(5,16)}</text>`;
+  }).join('');
+
+  // Bars: stake-in MEGA above zero (lime), stake-out MEGA below zero (orange)
+  const bars = active.map((s, i) => {
+    const stake_mega   = parseFloat(s.stake_mega);
+    const unstake_mega = parseFloat(s.unstake_mega);
+    let html = '';
+    if (stake_mega > 0) {
+      const top = yPos(stake_mega);
+      html += `<rect x="${xLeft(i)}" y="${top}" width="${barW}" height="${yZero - top}" fill="var(--theme)"/>`;
+    }
+    if (unstake_mega > 0) {
+      const bot = yNeg(unstake_mega);
+      html += `<rect x="${xLeft(i)}" y="${yZero}" width="${barW}" height="${bot - yZero}" fill="var(--sold)"/>`;
+    }
+    return html;
+  }).join('');
+
+  // Cumulative net MEGA line (right axis)
+  let pathD = '';
+  active.forEach((s, i) => {
+    const px = xMid(i);
+    const py = yCum(parseFloat(s.cumul_mega));
+    pathD += (i === 0 ? `M ${px} ${py}` : ` L ${px} ${py}`);
+  });
+  const cumulPath = `<path d="${pathD}" fill="none" stroke="var(--theme)" stroke-width="2" stroke-linejoin="round" stroke-dasharray="2,3" opacity="0.85"/>`;
+
+  // Zero reference line
+  const zeroLine = `<line x1="${padL}" y1="${yZero}" x2="${W-padR}" y2="${yZero}" stroke="var(--white-40)" stroke-width="1"/>`;
+
+  const hovers = active.map((s, i) =>
+    `<rect class="hover-rect" data-i="${i}" x="${padL + i*groupW}" y="${padT}" width="${groupW}" height="${innerH}"/>`
+  ).join('');
+
+  svg.innerHTML = `
+    ${gridLeft}${gridRight}${ticks}${bars}${cumulPath}${zeroLine}
+    <line id="stakeHL" class="hover-line" style="display:none" x1="0" y1="${padT}" x2="0" y2="${padT+innerH}"/>
+    ${hovers}
+  `;
+
+  const tooltip = document.getElementById('stakeTooltip');
+  const hl = svg.querySelector('#stakeHL');
+  svg.querySelectorAll('.hover-rect').forEach(rect => {
+    rect.addEventListener('mouseenter', () => {
+      const i = parseInt(rect.dataset.i, 10);
+      const s = active[i];
+      const px = xMid(i);
+      hl.setAttribute('x1', px); hl.setAttribute('x2', px); hl.style.display = '';
+      const card = svg.parentElement;
+      const cardRect = card.getBoundingClientRect();
+      const ttX = (px / W) * cardRect.width;
+      const left = Math.min(cardRect.width - 260, Math.max(8, ttX - 130));
+      tooltip.style.left = left + 'px';
+      tooltip.style.top  = (padT + 8) / H * cardRect.height + 'px';
+      const netMega = parseFloat(s.net_mega);
+      const netSign = netMega > 0 ? '+' : (netMega < 0 ? '−' : '');
+      tooltip.innerHTML = `
+        <div class="when">${s.hour.replace('T',' ')}:00 UTC</div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--theme)"></span>Stake-in</span><span class="v">+${fmt(s.stake_mega)} MEGA (${fmtInt(s.n_stake)} txs)</span></div>
+        <div class="row"><span class="l"><span class="sw" style="background:var(--sold)"></span>Stake-out</span><span class="v">−${fmt(s.unstake_mega)} MEGA (${fmtInt(s.n_unstake)} txs)</span></div>
+        <div class="row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--line)"><span class="l">Net this hour</span><span class="v" style="color:${netMega>=0?'var(--theme)':'var(--sold)'}">${netSign}${fmt(Math.abs(netMega))} MEGA (${s.net_n>=0?'+':''}${fmtInt(s.net_n)} txs)</span></div>
+        <div class="row"><span class="l" style="color:var(--theme)">Cumulative</span><span class="v" style="color:var(--theme)">${fmt(s.cumul_mega)} MEGA (${fmtInt(s.cumul_n)} txs)</span></div>
+      `;
+      tooltip.style.opacity = '1';
+    });
+  });
+  svg.addEventListener('mouseleave', () => {
+    tooltip.style.opacity = '0';
+    hl.style.display = 'none';
+  });
+}
+
+// ─── Staker table ───
+let stakerSort = { col: 'net_staked', dir: 'desc' };
+let stakerPage = 0;
+const PAGE_SIZE = 100;
+
+function renderStakers() {
+  const search = (document.getElementById('stakerSearch').value || '').toLowerCase().trim();
+  let rows = _data.staking.top_stakers;
+  if (search) rows = rows.filter(r => r.address.toLowerCase().includes(search));
+
+  // Sort
+  const num = v => v == null ? -Infinity : (typeof v === 'number' ? v : parseFloat(v));
+  rows = [...rows].sort((a, b) => {
+    const k = stakerSort.col;
+    const av = (k === 'address' || k === 'last_action') ? a[k] : num(a[k]);
+    const bv = (k === 'address' || k === 'last_action') ? b[k] : num(b[k]);
+    if (av < bv) return stakerSort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return stakerSort.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (stakerPage >= totalPages) stakerPage = totalPages - 1;
+  if (stakerPage < 0) stakerPage = 0;
+  const slice = rows.slice(stakerPage * PAGE_SIZE, (stakerPage + 1) * PAGE_SIZE);
+
+  const cols = [
+    {k:'address',     label:'Address',     l:true},
+    {k:'staked',      label:'Staked'},
+    {k:'unstaked',    label:'Unstaked'},
+    {k:'net_staked',  label:'Net'},
+    {k:'n_stake_tx',  label:'# stake'},
+    {k:'n_unstake_tx',label:'# unstake'},
+    {k:'last_action', label:'Last action', l:true},
+  ];
+  document.getElementById('stakerHead').innerHTML = `<tr>${cols.map(c => {
+    const cls = (c.l?'l ':'') + 'sortable ' + (stakerSort.col===c.k?'sorted':'') + (stakerSort.col===c.k && stakerSort.dir==='asc'?' asc':'');
+    return `<th class="${cls.trim()}" data-col="${c.k}">${c.label}</th>`;
+  }).join('')}</tr>`;
+  document.getElementById('stakerHead').querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.col;
+    if (stakerSort.col === k) stakerSort.dir = stakerSort.dir === 'desc' ? 'asc' : 'desc';
+    else { stakerSort.col = k; stakerSort.dir = (k === 'address' || k === 'last_action') ? 'asc' : 'desc'; }
+    stakerPage = 0; renderStakers();
+  }));
+
+  document.getElementById('stakerRows').innerHTML = slice.map(r => `
+    <tr>
+      <td class="l"><a class="addr" href="${expAddr(r.address)}" target="_blank">${short(r.address)}</a></td>
+      <td>${fmt(r.staked)}</td>
+      <td class="${parseFloat(r.unstaked)===0?'dim':''}">${fmt(r.unstaked)}</td>
+      <td style="color:var(--theme)">${fmt(r.net_staked)}</td>
+      <td>${fmtInt(r.n_stake_tx)}</td>
+      <td class="${r.n_unstake_tx===0?'dim':''}">${fmtInt(r.n_unstake_tx)}</td>
+      <td class="l dim">${r.last_action ? r.last_action.slice(0,16).replace('T',' ') : '—'}</td>
+    </tr>
+  `).join('');
+
+  const start = total ? stakerPage * PAGE_SIZE + 1 : 0;
+  const end = Math.min(total, (stakerPage + 1) * PAGE_SIZE);
+  document.getElementById('stakerPager').innerHTML = `
+    <span class="info">${fmtInt(start)}–${fmtInt(end)} OF ${fmtInt(total)}</span>
+    <button id="prevBtn" ${stakerPage===0?'disabled':''}>← PREV</button>
+    <span class="info">PAGE ${stakerPage+1} / ${totalPages}</span>
+    <button id="nextBtn" ${stakerPage>=totalPages-1?'disabled':''}>NEXT →</button>
+  `;
+  document.getElementById('prevBtn').addEventListener('click', () => { stakerPage = Math.max(0, stakerPage-1); renderStakers(); });
+  document.getElementById('nextBtn').addEventListener('click', () => { stakerPage = Math.min(totalPages-1, stakerPage+1); renderStakers(); });
+  document.getElementById('stakerHint').textContent = `${fmtInt(total)} addresses · sorted by ${stakerSort.col} ${stakerSort.dir}`;
+}
+
+document.getElementById('stakerSearch').addEventListener('input', () => { stakerPage = 0; renderStakers(); });
+
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>

@@ -42,6 +42,13 @@ def tge():
     return render_template("index.html")
 
 
+@app.route("/kpis")
+@app.route("/tge/kpis")
+def kpis_page():
+    """KPI tracker — Phase 1: live monitoring of the 53% reward pool."""
+    return render_template("kpis.html")
+
+
 @app.route("/")
 def index():
     """Redirect to canonical /tge so old bookmarks keep working.
