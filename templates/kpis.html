@@ -141,6 +141,7 @@
   <div class="meta">
     <a href="/tge">← TGE Dashboard</a>
     <span>BY <a href="https://hanyon.app" target="_blank" style="color:var(--white);border-bottom:1px solid var(--line-2);padding-bottom:1px"><b>HANYON ANALYTICS</b></a></span>
+    <span id="tgeLive" style="color:var(--text2);font-size:11px"></span>
     <span class="live" id="mSync">● LIVE</span>
   </div>
 </div>
@@ -257,6 +258,22 @@ function render() {
       <div class="sub">${fmtInt(staking.totals.active_stakers)} active stakers · ${fmt(parseFloat(staking.totals.lifetime_staked))} MEGA lifetime</div>
     </div>
   `;
+
+  // Live TGE timer — recompute every second from TGE timestamp so the displayed
+  // elapsed time ticks in real time instead of being frozen at snapshot time.
+  if (kpis.tge && kpis.tge.timestamp) {
+    if (window._tgeTickInterval) clearInterval(window._tgeTickInterval);
+    const tgeTs = kpis.tge.timestamp;
+    const tickTGE = () => {
+      const elapsed = Date.now()/1000 - tgeTs;
+      const days = elapsed / 86400;
+      const pct  = Math.min(100, (elapsed / (30*86400)) * 100);
+      const el = document.getElementById('tgeLive');
+      if (el) el.textContent = `${days.toFixed(2)}d post-TGE · 30d window ${pct.toFixed(2)}% elapsed`;
+    };
+    tickTGE();
+    window._tgeTickInterval = setInterval(tickTGE, 1000);
+  }
 
   // ─── KPI list grouped by category ───
   const order = ['Ecosystem Growth', 'MegaETH Performance', 'MegaETH Decentralization', 'Ethereum Decentralization'];
